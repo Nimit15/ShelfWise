@@ -1,0 +1,188 @@
+{
+  "error": null,
+  "results": {
+    "output": [
+      {
+        "ui_score": 71,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_droopy_lower_eyelid_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=6c4441911f2eccec66d0f73307e343e6150cec5fa48b9f0d0399592b2fb741c0"
+        ],
+        "raw_score": 58.389049768447876,
+        "type": "droopy_lower_eyelid",
+        "url": null
+      },
+      {
+        "ui_score": 84,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_droopy_upper_eyelid_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=03a5ef907c46a5702a1539247af47150fd38e3f234f4eaf528d56e96f2d006e5"
+        ],
+        "raw_score": 86.76837682723999,
+        "type": "droopy_upper_eyelid",
+        "url": null
+      },
+      {
+        "ui_score": 96,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_tear_trough_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=f234d661c7ee01f2d2e01c8125495a798e1b49b202f4172efbe9caf9d3137427"
+        ],
+        "raw_score": 97.80414756387472,
+        "type": "tear_trough",
+        "url": null
+      },
+      {
+        "ui_score": 83,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_eye_bag_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=d9520237b2e2762b79bc380bda27b2159b7c00f0ab45d7fb1fa724037fa4e71c"
+        ],
+        "raw_score": 84.63817238807678,
+        "type": "eye_bag",
+        "url": null
+      },
+      {
+        "ui_score": 83,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_oiliness_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=2057a52adc6229ec8cebb3ca2468d75a4c0ae1ba60652b519cd750fb657d06fc"
+        ],
+        "raw_score": 84.7208023071289,
+        "type": "oiliness",
+        "url": null
+      },
+      {
+        "ui_score": 91,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_firmness_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=6c17d5ac083a38af61cdf63ebec0cc140c772854a6733f98589a61591ab2aa27"
+        ],
+        "raw_score": 94.29552555084229,
+        "type": "firmness",
+        "url": null
+      },
+      {
+        "ui_score": 83,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_redness_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=1c7aeae2de7a346365c3bea553fa201f0a4ceb27de1f5092a0cb6ca8cd5bbab4"
+        ],
+        "raw_score": 85.84132385253906,
+        "type": "redness",
+        "url": null
+      },
+      {
+        "ui_score": 91,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_pore_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=a4bc21cbd33c0d4e7c6249dea1bd09c273619d9162795b240fb1ddd5cf2c3d07"
+        ],
+        "raw_score": 94.02874505519867,
+        "type": "pore",
+        "url": null
+      },
+      {
+        "ui_score": 83,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_radiance_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7199&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=a8191416c90e58743cb268261afaa872c6ebd67023be26c893c32ddbf89b51bd"
+        ],
+        "raw_score": 86.35613918304443,
+        "type": "radiance",
+        "url": null
+      },
+      {
+        "ui_score": 86,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_texture_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=017c7a6f202b2a910e79fa3dc18dc9ed3c976419d27a3644ebc228ccb78dc37d"
+        ],
+        "raw_score": 90.5355453491211,
+        "type": "texture",
+        "url": null
+      },
+      {
+        "ui_score": 77,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_dark_circle_v2_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=8a183835849aaedb11736efcf5e7c23e3498244e0a7f089f101d1034bbfd4c58"
+        ],
+        "raw_score": 83.243727684021,
+        "type": "dark_circle_v2",
+        "url": null
+      },
+      {
+        "ui_score": 98,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_wrinkle_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=4da1632fdbe33efbcc599e518ec5ebdee8bbd544ef7c333e8e94b2e429db2d85"
+        ],
+        "raw_score": 99.24774765968323,
+        "type": "wrinkle",
+        "url": null
+      },
+      {
+        "ui_score": 96,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_age_spot_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=42fe94d2284b0a07bbc4bb1032bbe4a013d2319f74a605a4579427a9cff3de4d"
+        ],
+        "raw_score": 98.44738006591797,
+        "type": "age_spot",
+        "url": null
+      },
+      {
+        "ui_score": 96,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_acne_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=2c403823c326235739c2b68e911fd5ceb33092cc451d8b8c81f929bb97241d98"
+        ],
+        "raw_score": 98.0581,
+        "type": "acne",
+        "url": null
+      },
+      {
+        "ui_score": 77,
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_moisture_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=b9cc15520a99fbb6712e61f6ad2a97a53615503b5635fad1621bda777399a69c"
+        ],
+        "raw_score": 67.8018867969513,
+        "type": "moisture",
+        "url": null
+      },
+      {
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_skin_type_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=7d5d38b311d0637148d650f34fc4c59c553f0b7efd06b37ec2ea0effb6a77bbf"
+        ],
+        "type": "skin_type",
+        "region": "whole",
+        "skin_type": "Normal",
+        "url": null
+      },
+      {
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_skin_type_t_zone_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=57f16009100522ea494d970d074fffea1afca2757837581dca5adeb1b5c0c8de"
+        ],
+        "type": "skin_type",
+        "region": "t_zone",
+        "skin_type": "Normal",
+        "url": null
+      },
+      {
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_skin_type_u_zone_output.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=aa1faf13bc6a4d2b4da613a257c2ad3e90fe8490bf44f12bf402a9f3c68ecc37"
+        ],
+        "type": "skin_type",
+        "region": "u_zone",
+        "skin_type": "Normal",
+        "url": null
+      },
+      {
+        "score": 86.33333333333333,
+        "type": "all",
+        "url": null
+      },
+      {
+        "score": 22,
+        "type": "skin_age",
+        "url": null
+      },
+      {
+        "mask_urls": [
+          "https://yce-us.s3-accelerate.amazonaws.com/ttl30/515975340435189929/123020805543/v2/aeMNNB0KmUIP8rnQ996tC5Q/e2019cd3-5853-4c55-8e49-bc936ea66724_resize_image.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261021T202652Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIARB77EV5Y5D7DAE3S%2F20261021%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Signature=755ee60e72a35d705e0a3850abdf2199b5cecc43cdc55375411b06b3b70e7db5"
+        ],
+        "type": "resize_image",
+        "url": null
+      }
+    ]
+  },
+  "task_status": "success",
+  "task_id": "CZFFRDrF8_cBSeL4eeOt7Q6SU6Kzy1kbahiiNfEGzMh10F0QbxZB-qAnIr-hIFSIV8vjSsGp_00cofvLX8kY0w"
+}

@@ -1,0 +1,750 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Atelier Aethitica — Luxury Clinical Design Tokens */
+    --ca-studiomid: #1C1815;
+    --ca-stonetone: #3A312A;
+    --ca-paper: #FFFFFF;
+    --ca-ink: #141210;
+    --ca-ink-muted: #4A433B;
+    --ca-ink-subtle: #8C8175;
+    --ca-ink-faint: #C4B9AE;
+    --ca-stone-divider: #4A433B;
+    --ca-stone-border: #5A514A;
+
+    /* Heritage Gold Accents */
+    --ca-gold-deep: #7A5A2E;
+    --ca-gold-warm: #B8955A;
+    --ca-gold-glow: #B8955A33;
+    --ca-gold-bright: #D4B47A;
+
+    /* Skin Tone Palette */
+    --ca-skin-warm: #D9AFA0;
+    --ca-skin-neutral: #C9A38D;
+    --ca-skin-cool: #B88E78;
+
+    /* Glassmorphism Tokens */
+    --ca-glass-bg: rgba(255, 255, 255, 0.07);
+    --ca-glass-border: rgba(255, 255, 255, 0.14);
+    --ca-glass-shadow: rgba(0, 0, 0, 0.25);
+
+    /* Status */
+    --ca-success: #0F5338;
+    --ca-warning: #B45309;
+    --ca-accent-red: #DC2626;
+    --ca-crimson: #991B1B;
+
+    /* Legacy compat */
+    --ca-emerald: #0F5338;
+    --ca-emerald-light: #147A4A;
+    --ca-emerald-glow: #0F533820;
+    --ca-amber: #B45309;
+    --ca-amber-deep: #92400E;
+    --ca-crimson-glow: #991B1B1A;
+
+    /* Legacy aliases for backward compat during transition */
+    --ca-alabaster: #F6F4F0;
+    --ca-white: #FFFFFF;
+    --ca-stone: #EFECE6;
+    --ca-stone-hover: #E7E3DB;
+    --ca-cream: #FDFBF7;
+    --ca-obsidian: #141615;
+    --ca-slate: #57534E;
+    --ca-slate-light: #A8A29E;
+    --ca-text-primary: #141615;
+    --ca-text-secondary: #57534E;
+    --ca-text-muted: #A8A29E;
+    --ca-text-light: #E5E5E5;
+    --ca-amber-light: #D97706;
+    --ca-amber-glow: #B453091A;
+    --ca-border: #DFDCD8;
+    --ca-border-strong: #D6D3CE;
+    --ca-focus: #0F5338;
+    --ca-glow-opacity: 0.1;
+  }
+}
+
+html {
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--ca-studiomid) !important;
+  color: var(--ca-paper) !important;
+  font-family: "Inter", system-ui, sans-serif;
+  font-feature-settings: "calt" 1, "kern" 1, "liga" 1;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ca-stone-border);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ca-ink-subtle);
+  background-clip: content-box;
+}
+
+/* Typography Scale — Editorial Serif + Clinical Sans */
+.text-display {
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+}
+
+.text-h1 {
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.text-h2 {
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.text-h3 {
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.text-subheading {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ca-ink-subtle);
+}
+
+.text-body {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--ca-ink-muted);
+}
+
+.text-body-sm {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ca-ink-subtle);
+}
+
+.text-body-xs {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ca-ink-faint);
+}
+
+.text-mono {
+  font-family: "Fira Code", "Monaco", monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+.text-mono-lg {
+  font-family: "Fira Code", "Monaco", monospace;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+/* Atelier Layout Containers */
+.atelier-container {
+  max-width: 90rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 1280px) {
+  .atelier-container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+.atelier-narrow {
+  max-width: 52rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Atelier Grid Systems */
+.atelier-grid-12 {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 768px) {
+  .atelier-grid-12 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .atelier-grid-12 {
+    grid-template-columns: repeat(12, 1fr);
+  }
+}
+
+.atelier-col-span-6 {
+  grid-column: span 1;
+}
+
+@media (min-width: 768px) {
+  .atelier-col-span-6 {
+    grid-column: span 6;
+  }
+}
+
+.atelier-col-span-12 {
+  grid-column: span 1;
+}
+
+@media (min-width: 768px) {
+  .atelier-col-span-12 {
+    grid-column: span 12;
+  }
+}
+
+/* Glassmorphism Cards — Atelier Aethitica Style */
+.atelier-glass {
+  background: var(--ca-glass-bg);
+  border: 1px solid var(--ca-glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 4px 24px var(--ca-glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition:
+    box-shadow 300ms ease,
+    border-color 300ms ease,
+    transform 300ms ease;
+}
+
+.atelier-glass:hover {
+  box-shadow:
+    0 8px 40px var(--ca-glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.atelier-glass-elevated {
+  background: var(--ca-glass-bg);
+  border: 1px solid var(--ca-glass-border);
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 12px 48px var(--ca-glass-shadow),
+    0 4px 16px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.atelier-solid-white {
+  background: var(--ca-paper);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.atelier-solid-dark {
+  background: var(--ca-studiomid);
+  border: 1px solid var(--ca-stone-border);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Atelier Buttons */
+.atelier-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: 100px;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  color: var(--ca-ink);
+  background: var(--ca-paper);
+  border: none;
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.atelier-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 32px rgba(255, 255, 255, 0.2),
+    0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+.atelier-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+}
+
+.atelier-btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ca-gold-glow);
+}
+
+.atelier-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: 100px;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  color: var(--ca-paper);
+  background: transparent;
+  border: 1.5px solid var(--ca-glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.atelier-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.atelier-btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ca-gold-glow);
+}
+
+.atelier-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 100px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: var(--ca-ink-subtle);
+  background: transparent;
+  transition: all 150ms ease;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.atelier-btn-ghost:hover {
+  color: var(--ca-paper);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Atelier Badges */
+.atelier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.atelier-badge-gold {
+  background: var(--ca-gold-glow);
+  color: var(--ca-gold-warm);
+  border: 1px solid rgba(184, 149, 90, 0.3);
+}
+
+.atelier-badge-white {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--ca-paper);
+  border: 1px solid var(--ca-glass-border);
+}
+
+.atelier-badge-skin {
+  background: rgba(217, 175, 160, 0.15);
+  color: var(--ca-skin-warm);
+  border: 1px solid rgba(217, 175, 160, 0.3);
+}
+
+.atelier-badge-crimson {
+  background: rgba(153, 27, 27, 0.15);
+  color: var(--ca-crimson);
+  border: 1px solid rgba(153, 27, 27, 0.3);
+}
+
+/* Atelier Inputs */
+.atelier-input {
+  display: block;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ca-glass-border);
+  color: var(--ca-paper);
+  font-family: "Inter", system-ui, sans-serif;
+  backdrop-filter: blur(10px);
+  transition: all 200ms ease;
+}
+
+.atelier-input::placeholder {
+  color: var(--ca-ink-faint);
+}
+
+.atelier-input:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.atelier-input:focus {
+  outline: none;
+  border-color: var(--ca-gold-warm);
+  box-shadow: 0 0 0 3px var(--ca-gold-glow);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Animations — Refined & Purposeful */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fade-in 400ms ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.stagger-1 { animation-delay: 60ms; }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+.stagger-6 { animation-delay: 360ms; }
+.stagger-7 { animation-delay: 420ms; }
+.stagger-8 { animation-delay: 480ms; }
+
+/* Focus styles */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ca-gold-glow);
+  border-radius: 8px;
+}
+
+/* Selection */
+::selection {
+  background: var(--ca-gold-glow);
+  color: var(--ca-ink);
+}
+
+/* Atelier Portrait Stage */
+.atelier-portrait-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-width: 600px;
+  margin: 0 auto;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+
+.atelier-portrait-frame {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+
+/* Diagnostic Reticles */
+.atelier-reticle {
+  position: absolute;
+  border: 1.5px solid var(--ca-paper);
+  border-radius: 4px;
+  pointer-events: none;
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.atelier-reticle.active {
+  box-shadow:
+    0 0 0 1px var(--ca-paper),
+    0 0 24px rgba(255, 255, 255, 0.4),
+    inset 0 0 24px rgba(255, 255, 255, 0.1);
+}
+
+.atelier-reticle-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ca-paper);
+  color: var(--ca-ink);
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  font-family: "Inter", system-ui, sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Skin Type Pills */
+.atelier-skin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 100px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: var(--ca-ink-subtle);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ca-glass-border);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.atelier-skin-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--ca-paper);
+}
+
+.atelier-skin-pill.active {
+  background: var(--ca-paper);
+  color: var(--ca-ink);
+  border-color: var(--ca-paper);
+  box-shadow: 0 4px 24px rgba(255, 255, 255, 0.2);
+}
+
+.atelier-skin-pill.sensitive.active {
+  background: var(--ca-crimson);
+  color: var(--ca-paper);
+  border-color: var(--ca-crimson);
+}
+
+/* Tilt Card - 3D Interactive */
+.atelier-tilt-card {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.atelier-tilt-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out;
+  will-change: transform;
+}
+
+/* Diagnostic Overlay Panels */
+.atelier-diagnostic-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.atelier-diagnostic-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  animation: fade-in 300ms ease-out forwards;
+}
+
+/* Clinical Telemetry Cards */
+.atelier-telemetry-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ca-glass-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  backdrop-filter: blur(12px);
+  transition: all 250ms ease;
+}
+
+.atelier-telemetry-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Verdict Ledger Columns */
+.atelier-verdict-column {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ca-glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(16px);
+}
+
+.atelier-verdict-column.keep {
+  border-left: 1px solid rgba(15, 83, 56, 0.3);
+}
+
+.atelier-verdict-column.pause {
+  border-left: 1px solid rgba(180, 83, 9, 0.3);
+}
+
+.atelier-verdict-column.add {
+  border-left: 1px solid rgba(184, 149, 90, 0.3);
+}
+
+/* Mask Overlay */
+.atelier-mask-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Stage Transition Indicator */
+.atelier-stage-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ca-ink-subtle);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ca-glass-border);
+}
+
+.atelier-stage-indicator.active {
+  color: var(--ca-paper);
+  background: var(--ca-gold-warm);
+  border-color: var(--ca-gold-warm);
+}

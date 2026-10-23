@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="700" viewBox="0 0 500 700">
+  <rect width="500" height="700" fill="#e8e3d9"/>
+  <!-- Face outline -->
+  <ellipse cx="250" cy="350" rx="140" ry="180" fill="#f5d6b8"/>
+  <!-- Hair -->
+  <path d="M110,300 C100,350 100,450 110,500 C120,580 200,650 280,620 C360,590 400,450 390,350 C380,250 300,200 200,200 C130,200 110,250 110,300 Z" fill="#3a2e23"/>
+  <!-- Eyes -->
+  <ellipse cx="200" cy="320" rx="20" ry="8" fill="#333"/>
+  <ellipse cx="300" cy="320" rx="20" ry="8" fill="#333"/>
+  <!-- Nose -->
+  <path d="M250,340 L245,400 L255,400 Z" fill="#d4a73e"/>
+  <!-- Mouth -->
+  <path d="M220,450 Q250,470 280,450" stroke="#8b857a" stroke-width="3" fill="none"/>
+  <!-- Shoulders -->
+  <path d="M100,500 Q250,650 400,500 L400,700 L100,700 Z" fill="#3a2e23"/>
+</svg>

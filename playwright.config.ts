@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3002",
     trace: "on-first-retry",
   },
   projects: [
@@ -18,8 +18,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx next start -p 3000",
-    url: "http://localhost:3000",
+    command: "npx next dev -p 3002",
+    url: "http://localhost:3002",
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },

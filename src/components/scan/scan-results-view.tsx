@@ -1,433 +1,376 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, BarChart3, Eye, Layers, Sparkles, Search, AlertTriangle, CheckCircle2, RotateCcw, Grid, Zap, MousePointer2 } from "lucide-react";
-import { ParsedScan, CONCERN_LABELS, getConcernColor } from "@/lib/mock-scan";
-import { YouCamConcern } from "@/types/youcam";
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  ChevronLeft,
+  BarChart2,
+  Sparkles,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  Eye,
+  Map,
+  FileText,
+} from "lucide-react";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { SkinTypeSelector, SkinProfile } from "@/components/shelf/SkinTypeSelector";
 import { DermalLayer3D } from "@/components/scan/DermalLayer3D";
-import { SkinTypeSelector, SkinType, Sensitivity } from "@/components/shelf/SkinTypeSelector";
+import { ParsedScan, CONCERN_LABELS, CONCERN_COLORS, getConcernColor } from "@/lib/mock-scan";
+import { SkinType } from "@/components/shelf/SkinTypeSelector";
 
-interface ScanResultsViewProps {
+export interface ScanResultsViewProps {
   scan: ParsedScan;
   onAudit: () => void;
   onBack: () => void;
-  skinProfile: { type: SkinType; sensitive: Sensitivity };
-  onSkinProfileChange: (profile: { type: SkinType; sensitive: Sensitivity }) => void;
+  skinProfile: SkinProfile;
+  onSkinProfileChange: (profile: SkinProfile) => void;
+  selectedImage: string | null;
 }
 
-const priorityConcerns = [
-  { concern: "moisture", score: 67, stars: 2, label: "Moisture / Hydration" },
-  { concern: "dark_circle_v2", score: 83, stars: 3, label: "Dark Circles" },
-  { concern: "redness", score: 85, stars: 3, label: "Redness / Irritation" },
-];
+function starRating(score: number): number {
+  if (score >= 85) return 5;
+  if (score >= 70) return 4;
+  if (score >= 55) return 3;
+  if (score >= 40) return 2;
+  return 1;
+}
 
-const strengths = [
-  { concern: "acne", score: 98, stars: 5, label: "Acne & Blemishes" },
-  { concern: "age_spot", score: 98, stars: 5, label: "Age Spots" },
-  { concern: "tear_trough", score: 97, stars: 5, label: "Tear Trough Depth" },
-];
+const ZONE_LABELS: Record<string, string> = {
+  t_zone: "T-Zone",
+  u_zone: "U-Zone (Cheeks)",
+  whole: "Whole Face",
+  periorbital: "Periorbital",
+  nasolabial: "Nasolabial Fold",
+  forehead: "Forehead",
+};
 
-const allConcerns: Array<{ type: string; uiScore: number; label: string }> = [
-  { type: "wrinkle", uiScore: 98, label: "Fine Lines & Wrinkles" },
-  { type: "pore", uiScore: 91, label: "Pore Visibility" },
-  { type: "texture", uiScore: 86, label: "Skin Texture" },
-  { type: "acne", uiScore: 96, label: "Acne & Blemishes" },
-  { type: "oiliness", uiScore: 83, label: "Oiliness / Sebum" },
-  { type: "radiance", uiScore: 83, label: "Radiance" },
-  { type: "eye_bag", uiScore: 83, label: "Eye Bags" },
-  { type: "age_spot", uiScore: 96, label: "Age Spots / Hyperpigmentation" },
-  { type: "dark_circle_v2", uiScore: 77, label: "Dark Circles" },
-  { type: "droopy_upper_eyelid", uiScore: 84, label: "Drooping Upper Eyelid" },
-  { type: "droopy_lower_eyelid", uiScore: 71, label: "Drooping Lower Eyelid" },
-  { type: "firmness", uiScore: 91, label: "Firmness" },
-  { type: "moisture", uiScore: 67, label: "Moisture / Hydration" },
-  { type: "redness", uiScore: 83, label: "Redness / Irritation" },
-  { type: "tear_trough", uiScore: 96, label: "Tear Trough Depth" },
-];
+const CONCERN_ZONES: Record<string, string[]> = {
+  oiliness: ["t_zone"],
+  pore: ["t_zone", "cheeks"],
+  acne: ["t_zone", "cheeks", "jawline"],
+  wrinkle: ["periorbital", "nasolabial"],
+  dark_circle: ["periorbital"],
+  tear_trough: ["periorbital"],
+  eye_bag: ["periorbital"],
+  firmness: ["whole"],
+  texture: ["whole"],
+  radiance: ["whole"],
+  moisture: ["whole"],
+  redness: ["cheeks", "t_zone"],
+};
 
-export function ScanResultsView({ scan, onAudit, onBack, skinProfile, onSkinProfileChange }: ScanResultsViewProps) {
-  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
-  const [selectedConcern, setSelectedConcern] = useState<string | null>(null);
-  const [maskOpacity, setMaskOpacity] = useState(0.7);
-  const containerRef = useRef<HTMLDivElement>(null);
+export function ScanResultsView({
+  scan,
+  onAudit,
+  onBack,
+  skinProfile,
+  onSkinProfileChange,
+  selectedImage,
+}: ScanResultsViewProps) {
+  const concernScores: Record<string, number> = {};
+  for (const c of scan.concerns) {
+    const baseId = c.type.replace("hd_", "").replace("v2", "");
+    concernScores[baseId] = c.uiScore;
+  }
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-  };
+  const priorityConcerns = scan.concerns
+    .filter((c) => c.type !== "hd_skin_type" && c.uiScore !== undefined)
+    .sort((a, b) => a.uiScore - b.uiScore)
+    .slice(0, 6);
+
+  const strengthConcerns = scan.concerns
+    .filter((c) => c.type !== "hd_skin_type" && c.uiScore !== undefined)
+    .sort((a, b) => b.uiScore - a.uiScore)
+    .slice(0, 4);
+
+  const skinTypeLabel = scan.skinType.type;
+  const skinAge = scan.skinAge;
+  const overallScore = scan.overallScore;
+
+  const primaryConcern = priorityConcerns[0];
+  const primaryLabel = primaryConcern
+    ? CONCERN_LABELS[primaryConcern.type] || primaryConcern.type
+    : "N/A";
 
   return (
-    <div className="min-h-screen bg-[var(--ca-studiomid)] relative overflow-hidden">
-      {/* Ambient Glow */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-20 blur-[200px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-skin-neutral) 0%, transparent 70%)" }} />
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-15 blur-[150px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-gold-warm) 0%, transparent 70%)" }} />
-      </div>
+    <div className="min-h-screen bg-[#161310]">
+      <div className="atelier-studio-backdrop" />
 
-      {/* Top Navigation */}
-      <header className="relative z-20 w-full border-b border-[var(--ca-stone-border)] bg-[var(--ca-studiomid)]/80 backdrop-blur-xl">
-        <div className="atelier-container flex h-16 items-center justify-between">
-          <nav className="flex items-center gap-6" aria-label="Atelier stages">
-            <span className="atelier-stage-indicator" data-stage="1">
-              <span className="text-mono-lg">01</span> Skin Telemetry
-            </span>
-            <span className="atelier-stage-indicator active" data-stage="2">
-              <span className="text-mono-lg">02</span> Bio-Shelf Audit
-            </span>
-            <span className="atelier-stage-indicator" data-stage="3">
-              <span className="text-mono-lg">03</span> Formulation Ledger
-            </span>
-          </nav>
+      <div className="relative mx-auto max-w-6xl px-4 py-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6 flex items-center justify-between"
+        >
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 text-[#C4BDB3] hover:text-[#F7F4EF]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="font-mono-tech text-xs">Back</span>
+          </button>
 
-          <h1 className="text-h2 font-light tracking-tight" style={{ fontFamily: "var(--font-cormorant)" }}>
-            ShelfWise Atelier
-          </h1>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-1.5 bg-[var(--ca-glass-bg)] border border-[var(--ca-glass-border)] rounded-full px-3 py-1.5 backdrop-blur-xl">
-              <span className="text-body-sm text-[var(--ca-ink-subtle)]">₹ INR</span>
-              <span className="text-body-sm font-medium text-[var(--ca-paper)]">/</span>
-              <span className="text-body-sm text-[var(--ca-gold-warm)]">$ USD</span>
-            </div>
-            <button onClick={onBack} className="atelier-btn-ghost">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onAudit}
+              className="flex items-center gap-2 rounded-full border border-[#E5C185]/30 bg-[#E5C185]/10 px-4 py-2 font-mono-tech text-xs text-[#E5C185] transition-all hover:bg-[#E5C185]/20"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Shelf Audit
             </button>
           </div>
-        </div>
-      </header>
+        </motion.div>
 
-      <main className="relative z-10 flex-1 overflow-y-auto">
-        <div className="atelier-container py-8">
-          {/* Scan Summary Header */}
-          <div className="mb-12 animate-slide-up stagger-1">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">YouCam V2.1 SD Analysis</span>
-                <h1 className="text-h1 font-light mt-1">Dermal Telemetry Studio</h1>
-              </div>
-              <div className="flex items-center gap-2 text-body-sm text-[var(--ca-ink-subtle)]">
-                <span className="text-mono-lg">Overall</span>
-                <span className="text-[var(--ca-gold-warm)] text-mono-lg font-bold">{scan.overallScore.toFixed(1)}/100</span>
-                <span className="text-mono-lg">Age</span>
-                <span className="text-[var(--ca-gold-warm)] text-mono-lg font-bold">{scan.skinAge}yrs</span>
-              </div>
-            </div>
+        {/* Hero Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8"
+        >
+          <h1 className="font-serif-editorial mb-2 text-4xl text-[#F7F4EF]">
+            Scan Results: {skinTypeLabel} Skin
+          </h1>
+          <p className="text-[#C4BDB3]">
+            Skin Age: {skinAge} • Overall Score: {overallScore.toFixed(1)}
+          </p>
+        </motion.div>
 
-            {/* Summary Metrics */}
-            <div className="atelier-grid-12 gap-4">
-              <div className="atelier-col-span-6 atelier-col-span-12 atelier-glass p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: "var(--ca-gold-glow)" }}>
-                    <BarChart3 className="h-7 w-7" style={{ color: "var(--ca-gold-warm)" }} />
-                  </div>
-                  <div>
-                    <p className="text-h3 font-light text-[var(--ca-paper)]">{scan.overallScore.toFixed(1)}</p>
-                    <p className="text-body-sm text-[var(--ca-ink-subtle)]">Overall Score / 100</p>
-                  </div>
-                </div>
-              </div>
-              <div className="atelier-col-span-6 atelier-col-span-12 atelier-glass p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: "rgba(217,175,160,0.15)" }}>
-                    <Sparkles className="h-7 w-7" style={{ color: "var(--ca-skin-warm)" }} />
-                  </div>
-                  <div>
-                    <p className="text-h3 font-light text-[var(--ca-paper)]">{scan.skinAge}</p>
-                    <p className="text-body-sm text-[var(--ca-ink-subtle)]">Skin Age (years)</p>
-                  </div>
-                </div>
-              </div>
-              <div className="atelier-col-span-6 atelier-col-span-12 atelier-glass p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: "rgba(153,27,27,0.15)" }}>
-                    <AlertTriangle className="h-7 w-7" style={{ color: "var(--ca-crimson)" }} />
-                  </div>
-                  <div>
-                    <p className="text-h3 font-light text-[var(--ca-paper)]">{allConcerns.filter(c => c.uiScore < 65).length}</p>
-                    <p className="text-body-sm text-[var(--ca-ink-subtle)]">Priority Concerns</p>
-                  </div>
-                </div>
-              </div>
-              <div className="atelier-col-span-6 atelier-col-span-12 atelier-glass p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: "rgba(15,83,56,0.15)" }}>
-                    <CheckCircle2 className="h-7 w-7" style={{ color: "var(--ca-success)" }} />
-                  </div>
-                  <div>
-                    <p className="text-h3 font-light text-[var(--ca-paper)]">{allConcerns.filter(c => c.uiScore >= 85).length}</p>
-                    <p className="text-body-sm text-[var(--ca-ink-subtle)]">Strongest Attributes</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3D Dermal Layer Visualizer */}
-          <div className="mb-12 animate-slide-up stagger-2">
-            <DermalLayer3D
-              scanData={{
-                concerns: scan.concerns.map(c => ({
-                  type: c.type,
-                  uiScore: c.uiScore || 0,
-                  maskUrls: c.maskUrls || [`/demo-scan/${c.type}.png`],
-                })),
-                overallScore: scan.overallScore,
-              }}
-              selfieUrl="https://images.unsplash.com/photo-1554151228-14d9def656e4?w=800&h=1067&fit=crop&crop=face"
+        {/* Image Display */}
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-6 rounded-2xl border border-white/12 bg-white/[0.035] p-3"
+          >
+            <img
+              src={selectedImage}
+              alt="Skin analysis mask overlay"
+              className="h-64 w-full rounded-xl object-cover"
             />
-          </div>
+          </motion.div>
+        )}
 
-          {/* 2D Precision View - Concern Grid */}
-          <div className="mb-12 animate-slide-up stagger-3">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">16-Concern Precision Matrix</span>
-                <h2 className="text-h2 font-light mt-1">Ranked by Clinical Urgency</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-body-sm text-[var(--ca-ink-subtle)]">Mask Opacity</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={Math.round(maskOpacity * 100)}
-                  onChange={(e) => setMaskOpacity(parseInt(e.target.value) / 100)}
-                  className="w-32 accent-[var(--ca-gold-warm)]"
-                />
-                <span className="text-mono text-[var(--ca-gold-warm)] w-10 text-right">{Math.round(maskOpacity * 100)}%</span>
-              </div>
+        {/* 3D Dermal Layer Viewer */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-8"
+        >
+          <DermalLayer3D concerns={scan.concerns} concernScores={concernScores} />
+        </motion.div>
+
+        {/* Priority Concerns & Strengths Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2"
+        >
+          {/* Priority Concerns */}
+          <TiltCard className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-[#F87171]" />
+              <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                Priority Concerns
+              </h3>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {allConcerns.map((concern, index) => {
+            <div className="space-y-3">
+              {priorityConcerns.map((concern) => {
+                const label = CONCERN_LABELS[concern.type] || concern.type;
                 const color = getConcernColor(concern.uiScore);
-                const isPriority = concern.uiScore < 65;
-                const isStrength = concern.uiScore >= 85;
+                const stars = starRating(concern.uiScore);
+                const zones = CONCERN_ZONES[concern.type.replace("hd_", "")] || [];
 
                 return (
-                  <motion.div
+                  <div
                     key={concern.type}
-                    className={`atelier-telemetry-card group relative cursor-pointer ${selectedConcern === concern.type ? "ring-2" : ""}`}
-                    style={{
-                      borderColor: selectedConcern === concern.type ? "var(--ca-gold-warm)" : "var(--ca-glass-border)",
-                      boxShadow: selectedConcern === concern.type
-                        ? "0 0 0 1px var(--ca-gold-warm), 0 8px 32px rgba(184, 149, 90, 0.15)"
-                        : undefined,
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + index * 0.03, duration: 400 }}
-                    onClick={() => setSelectedConcern(selectedConcern === concern.type ? null : concern.type)}
+                    className="rounded-xl border border-white/8 bg-black/30 p-3"
                   >
-                    <div className="flex items-start gap-4">
-                      <motion.div
-                        className="flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-xl"
-                        style={{
-                          backgroundColor: `${color}20`,
-                          color: color,
-                        }}
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.1 + index * 0.03, type: "spring", stiffness: 300, damping: 20 }}
+                    <div className="mb-1 flex items-center justify-between">
+                      <span
+                        className="font-serif-editorial text-sm text-[#F7F4EF]"
                       >
-                        <span className="text-mono-lg font-bold">{concern.uiScore}</span>
-                      </motion.div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-[var(--ca-paper)] truncate">{concern.label}</h4>
-                          {isPriority && (
-                            <motion.span
-                              className="atelier-badge-crimson text-xs"
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                            >
-                              Priority
-                            </motion.span>
-                          )}
-                          {isStrength && !isPriority && (
-                            <motion.span
-                              className="atelier-badge-gold text-xs"
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                            >
-                              Strength
-                            </motion.span>
-                          )}
-                        </div>
-                        <div className="mt-2 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: color, width: `${concern.uiScore}%` }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${concern.uiScore}%` }}
-                            transition={{ delay: 0.2 + index * 0.03, duration: 600, ease: [0.25, 0.46, 0.45, 0.94] }}
-                          />
-                        </div>
+                        {label}
+                      </span>
+                      <div
+                        className="flex items-center gap-1"
+                        style={{ color }}
+                      >
+                        {Array.from({ length: stars }).map((_, i) => (
+                          <Sparkles key={i} className="h-3 w-3 fill-current" />
+                        ))}
                       </div>
                     </div>
 
-                    {/* Expandable detail */}
-                    <AnimatePresence>
-                      {selectedConcern === concern.type && (
-                        <motion.div
-                          className="mt-4 pt-4 border-t border-[var(--ca-stone-border)] animate-slide-up"
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                        >
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <span className="text-body-xs text-[var(--ca-ink-faint)] uppercase tracking-wider">Raw Score</span>
-                              <p className="text-mono-lg font-bold text-[var(--ca-gold-warm)]">{scan.concerns.find(c => c.type === concern.type)?.rawScore.toFixed(0) || "N/A"}</p>
-                            </div>
-                            <div>
-                              <span className="text-body-xs text-[var(--ca-ink-faint)] uppercase tracking-wider">UI Score</span>
-                              <p className="text-mono-lg font-bold text-[var(--ca-paper)]">{concern.uiScore}</p>
-                            </div>
-                            <div className="sm:col-span-2">
-                              <span className="text-body-xs text-[var(--ca-ink-faint)] uppercase tracking-wider">Clinical Note</span>
-                              <p className="text-body-sm text-[var(--ca-ink-muted)] mt-1">
-                                {isPriority
-                                  ? "Requires immediate barrier-supportive intervention. Avoid actives that compromise stratum corneum."
-                                  : isStrength
-                                  ? "Excellent baseline. Maintenance protocol sufficient."
-                                  : "Moderate concern. Targeted actives recommended within 90-day window."}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono-tech text-[#8A8177]">
+                        Severity Score
+                      </span>
+                      <span
+                        className="font-mono-tech font-medium"
+                        style={{ color }}
+                      >
+                        {concern.uiScore}/100
+                      </span>
+                    </div>
+
+                    {zones.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {zones.map((zone) => (
+                          <span
+                            key={zone}
+                            className="font-mono-tech text-[10px] text-[#8A8177]"
+                          >
+                            {ZONE_LABELS[zone] || zone}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
-          </div>
+          </TiltCard>
 
-          {/* Priority vs Strengths Panels */}
-          <div className="mb-12 animate-slide-up stagger-4">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Priority Concerns */}
-              <div className="atelier-glass-elevated p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(153,27,27,0.15)" }}>
-                    <AlertTriangle className="h-5 w-5" style={{ color: "var(--ca-crimson)" }} />
-                  </div>
-                  <div>
-                    <h3 className="text-h3 font-light">Priority Focus (3)</h3>
-                    <p className="text-body-sm text-[var(--ca-ink-subtle)]">Scores under 65 — Immediate clinical attention</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {priorityConcerns.map((pc, i) => (
-                    <motion.div
-                      key={pc.concern}
-                      className="flex items-center justify-between p-3 rounded-xl"
-                      style={{ background: "rgba(153,27,27,0.08)", border: "1px solid rgba(153,27,27,0.15)" }}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + i * 0.1 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-mono-lg font-bold text-[var(--ca-crimson)] w-8 text-right">{pc.score}</span>
-                        <div>
-                          <p className="font-medium text-[var(--ca-paper)]">{pc.label}</p>
-                          <div className="flex items-center gap-1.5">
-                            {[...Array(pc.stars)].map((_, si) => (
-                              <motion.span key={si} className="h-4 w-4" style={{ color: "var(--ca-crimson)" }}>
-                                <CheckCircle2 className="h-4 w-4" />
-                              </motion.span>
-                            ))}
-                            {[...Array(5 - pc.stars)].map((_, si) => (
-                              <span key={si} className="h-4 w-4 text-[var(--ca-ink-faint)]">
-                                <CheckCircle2 className="h-4 w-4" />
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+          {/* Strengths */}
+          <TiltCard className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-[#34D399]" />
+              <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                Skin Strengths
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {strengthConcerns.map((concern) => {
+                const label = CONCERN_LABELS[concern.type] || concern.type;
+                const color = getConcernColor(concern.uiScore);
+                const stars = starRating(concern.uiScore);
+
+                return (
+                  <div
+                    key={concern.type}
+                    className="rounded-xl border border-white/8 bg-black/30 p-3"
+                  >
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                        {label}
+                      </span>
+                      <div className="flex items-center gap-1 text-[#34D399]">
+                        {Array.from({ length: 5 - stars }).map((_, i) => (
+                          <CheckCircle key={i} className="h-3 w-3 fill-current" />
+                        ))}
                       </div>
-                      <span className="atelier-badge-crimson text-xs">Address First</span>
-                    </motion.div>
-                  ))}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono-tech text-[#8A8177]">Score</span>
+                      <span className="font-mono-tech font-medium text-[#34D399]">
+                        {concern.uiScore}/100
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </TiltCard>
+        </motion.div>
+
+        {/* Skin Profile Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mb-8"
+        >
+          <TiltCard className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Info className="h-4 w-4 text-[#E5C185]" />
+              <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                Refine Your Profile
+              </h3>
+            </div>
+            <p className="mb-4 text-sm text-[#C4BDB3]">
+              Adjust your skin type and sensitivity. This affects how the bio-inventory
+              engine flags conflicts and recommends products.
+            </p>
+
+            <SkinTypeSelector
+              value={skinProfile}
+              onChange={(profile) => onSkinProfileChange(profile)}
+              youcamDetected={scan.skinType.type.toLowerCase() as SkinType}
+              compact
+            />
+          </TiltCard>
+        </motion.div>
+
+        {/* Biometric Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <TiltCard className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                Clinical Summary
+              </h3>
+              <span className="font-mono-tech text-xs text-[#8A8177]">
+                Primary Concern: {primaryLabel}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-white/8 bg-black/30 p-4 text-center">
+                <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                  Overall Score
+                </div>
+                <div className="font-serif-editorial mt-1 text-2xl text-[#F7F4EF]">
+                  {overallScore.toFixed(1)}
                 </div>
               </div>
 
-              {/* Strongest Attributes */}
-              <div className="atelier-glass-elevated p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(15,83,56,0.15)" }}>
-                    <CheckCircle2 className="h-5 w-5" style={{ color: "var(--ca-success)" }} />
-                  </div>
-                  <div>
-                    <h3 className="text-h3 font-light">Strongest Attributes (3)</h3>
-                    <p className="text-body-sm text-[var(--ca-ink-subtle)]">Scores ≥ 85 — Maintenance protocol sufficient</p>
-                  </div>
+              <div className="rounded-xl border border-white/8 bg-black/30 p-4 text-center">
+                <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                  Skin Age
                 </div>
-                <div className="space-y-3">
-                  {strengths.map((s, i) => (
-                    <motion.div
-                      key={s.concern}
-                      className="flex items-center justify-between p-3 rounded-xl"
-                      style={{ background: "rgba(15,83,56,0.08)", border: "1px solid rgba(15,83,56,0.15)" }}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + i * 0.1 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-mono-lg font-bold text-[var(--ca-success)] w-8 text-right">{s.score}</span>
-                        <div>
-                          <p className="font-medium text-[var(--ca-paper)]">{s.label}</p>
-                          <div className="flex items-center gap-1.5">
-                            {[...Array(s.stars)].map((_, si) => (
-                              <span key={si} className="h-4 w-4" style={{ color: "var(--ca-success)" }}>
-                                <CheckCircle2 className="h-4 w-4" />
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <span className="atelier-badge-gold text-xs">Maintain</span>
-                    </motion.div>
-                  ))}
+                <div className="font-serif-editorial mt-1 text-2xl text-[#F7F4EF]">
+                  {skinAge}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/8 bg-black/30 p-4 text-center">
+                <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                  Concerns Analyzed
+                </div>
+                <div className="font-serif-editorial mt-1 text-2xl text-[#F7F4EF]">
+                  {scan.concerns.filter((c) => c.type !== "hd_skin_type").length}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/8 bg-black/30 p-4 text-center">
+                <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                  Skin Type
+                </div>
+                <div className="font-serif-editorial mt-1 text-2xl text-[#F7F4EF]">
+                  {skinTypeLabel}
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Skin Type Selector */}
-          <div className="mb-12 animate-slide-up stagger-5">
-            <SkinTypeSelector
-              value={skinProfile}
-              onChange={onSkinProfileChange}
-              youcamDetected={scan.skinType?.type ? (() => {
-                const lower = scan.skinType?.type?.toLowerCase();
-                if (lower?.includes("oily")) return "oily";
-                if (lower?.includes("dry")) return "dry";
-                if (lower?.includes("combination") || lower?.includes("mix")) return "combination";
-                return "normal";
-              })() : undefined}
-            />
-          </div>
-
-          {/* CTA to Audit */}
-          <div className="flex justify-center animate-slide-up stagger-6">
-            <button
-              onClick={onAudit}
-              className="atelier-btn-primary w-full max-w-md"
-            >
-              <Search className="h-5 w-5" />
-              Proceed to Bio-Shelf Audit
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </main>
+          </TiltCard>
+        </motion.div>
+      </div>
     </div>
   );
 }
+
+export default ScanResultsView;

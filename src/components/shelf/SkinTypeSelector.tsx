@@ -1,327 +1,267 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, Droplet, Flame, Sparkles, Shield, AlertTriangle, Info } from "lucide-react";
-import { TiltCard } from "@/components/ui/TiltCard";
+import React from "react";
+import { motion } from "framer-motion";
+import { Droplets, Sun, Layers, ShieldCheck, ShieldAlert, Sparkles } from "lucide-react";
 
 export type SkinType = "oily" | "dry" | "combination" | "normal";
-export type Sensitivity = boolean;
+export type Sensitivity = "sensitive" | "normal";
 
-interface SkinTypeSelectorProps {
-  value: { type: SkinType; sensitive: Sensitivity };
-  onChange: (value: { type: SkinType; sensitive: Sensitivity }) => void;
-  youcamDetected?: SkinType | null;
+export interface SkinProfile {
+  type: SkinType;
+  sensitive: Sensitivity;
+}
+
+export interface SkinTypeSelectorProps {
+  value: SkinProfile;
+  onChange: (profile: SkinProfile) => void;
+  youcamDetected?: SkinType;
+  compact?: boolean;
   className?: string;
 }
 
-const skinTypeData: Record<SkinType, {
+const SKIN_TYPE_META: Array<{
+  id: SkinType;
   label: string;
-  description: string;
-  icon: React.ReactNode;
-  traits: string[];
-  needs: string[];
-  avoids: string[];
-  accentColor: string;
-  accentGlow: string;
-}> = {
-  oily: {
+  traits: string;
+  vehicleRule: string;
+  avoids: string;
+  icon: React.ElementType;
+}> = [
+  {
+    id: "oily",
     label: "Oily",
-    description: "High Sebum / Enlarged Pores",
-    icon: <Flame className="h-6 w-6" />,
-    traits: ["Excess shine", "Visible pores", "Prone to congestion"],
-    needs: ["Lightweight gel/fluid vehicles", "Oil-control actives (Niacinamide, BHA, Zinc PCA)", "Non-comedogenic SPF"],
-    avoids: ["Heavy occlusive creams", "Rich balms", "Mineral oil-based products"],
-    accentColor: "var(--ca-emerald)",
-    accentGlow: "var(--ca-emerald-glow)",
+    traits: "Excess sebum · Enlarged pores",
+    vehicleRule: "Best with Gel, Light Fluid & BHA/Niacinamide",
+    avoids: "Flags heavy occlusive creams & balms",
+    icon: Droplets,
   },
-  dry: {
+  {
+    id: "dry",
     label: "Dry",
-    description: "Lipid-Depleted / Tightness & Flaking",
-    icon: <Droplet className="h-6 w-6" />,
-    traits: ["Tight feeling", "Flaking/rough texture", "Fine lines more visible"],
-    needs: ["Rich ceramide creams", "Squalane, Panthenol, HA", "Non-stripping cream/milk cleansers"],
-    avoids: ["Foaming cleansers", "High % glycolic acid", "Alcohol-based toners"],
-    accentColor: "var(--ca-amber)",
-    accentGlow: "var(--ca-amber-glow)",
+    traits: "Lipid-depleted · Tightness",
+    vehicleRule: "Best with Rich Ceramide Creams & Milky Cleansers",
+    avoids: "Flags stripping foaming cleansers & high acids",
+    icon: Sun,
   },
-  combination: {
+  {
+    id: "combination",
     label: "Combination",
-    description: "Oily T-Zone / Normal-Dry Cheeks",
-    icon: <Sparkles className="h-6 w-6" />,
-    traits: ["Shiny T-zone", "Normal/dry cheeks", "Different needs per zone"],
-    needs: ["Balanced gel-cream textures", "Gentle multi-zone hydration", "Targeted BHA/PHA"],
-    avoids: ["Heavy creams on T-zone", "Stripping cleansers on cheeks", "One-size-fits-all products"],
-    accentColor: "var(--ca-obsidian)",
-    accentGlow: "rgba(20,22,21,0.1)",
+    traits: "Oily T-Zone · Dry cheeks",
+    vehicleRule: "Best with Balanced Lotions & Multi-zone Actives",
+    avoids: "Flags extreme drying or overly heavy oils",
+    icon: Layers,
   },
-  normal: {
+  {
+    id: "normal",
     label: "Normal",
-    description: "Eudermic / Well-Balanced Barrier",
-    icon: <Shield className="h-6 w-6" />,
-    traits: ["Balanced hydration", "Minimal concerns", "Good tolerance"],
-    needs: ["Barrier maintenance", "Antioxidant protection (Vit C)", "Daily broad-spectrum SPF"],
-    avoids: ["Unnecessary aggressive actives", "Over-layering", "Barrier disruption"],
-    accentColor: "var(--ca-emerald)",
-    accentGlow: "var(--ca-emerald-glow)",
+    traits: "Balanced sebum & hydration",
+    vehicleRule: "Best with Barrier Maintenance & Antioxidants",
+    avoids: "Flags unnecessary overlapping actives",
+    icon: ShieldCheck,
   },
-};
+];
 
 export function SkinTypeSelector({
   value,
   onChange,
   youcamDetected,
+  compact = false,
   className = "",
 }: SkinTypeSelectorProps) {
-  const [hoveredType, setHoveredType] = useState<SkinType | null>(null);
+  const activeMeta = SKIN_TYPE_META.find((m) => m.id === value.type) ?? SKIN_TYPE_META[2];
+  const isSensitive = value.sensitive === "sensitive";
 
-  return (
-    <div className={`animate-slide-up stagger-2 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-subheading">Skin Type & Sensitivity</p>
-          <h3 className="text-h3 mt-1">Your Skin Profile</h3>
+  if (compact) {
+    return (
+      <div className={`flex flex-col gap-2.5 ${className}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C4BDB3]">
+            Skin Profile & Vehicle Calibration
+          </span>
+          {youcamDetected && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#E5C185]/40 bg-[#E5C185]/10 px-2.5 py-0.5 font-mono-tech text-[10px] text-[#E5C185]">
+              <Sparkles className="h-2.5 w-2.5"/>
+              AI Detected: {youcamDetected.toUpperCase()}
+            </span>
+          )}
         </div>
-        {youcamDetected && (
-          <motion.span
-            className="badge-emerald flex items-center gap-1.5"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <Info className="h-3 w-3" />
-            Detected by YouCam AI: {skinTypeData[youcamDetected].label}
-          </motion.span>
-        )}
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {(Object.keys(skinTypeData) as SkinType[]).map((type) => {
-          const data = skinTypeData[type];
-          const isSelected = value.type === type;
-          const isDetected = youcamDetected === type;
-
-          return (
-            <TiltCard
-              key={type}
-              maxTilt={4}
-              glass={!isSelected}
-              stone={isSelected}
-              className="group cursor-pointer"
-              onMouseEnter={() => setHoveredType(type)}
-              onMouseLeave={() => setHoveredType(null)}
-              onClick={() => onChange({ ...value, type })}
-            >
-              <div className="p-5 relative">
-                {/* Selected indicator */}
-                <AnimatePresence mode="popLayout">
-                  {isSelected && (
-                    <motion.div
-                      className="absolute -top-2 -right-2"
-                      initial={{ scale: 0, rotate: -45 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      exit={{ scale: 0, rotate: 45 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                      <Check className="h-5 w-5 text-white" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* YouCam detected badge */}
-                <AnimatePresence mode="popLayout">
-                  {isDetected && !isSelected && (
-                    <motion.span
-                      className="absolute -top-2 -right-2 badge-emerald text-xs"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      YouCam AI
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-
-                {/* Icon */}
-                <motion.div
-                  className="mb-4 flex items-center justify-center w-14 h-14 rounded-2xl"
-                  style={{
-                    backgroundColor: isSelected
-                      ? data.accentColor
-                      : hoveredType === type
-                      ? data.accentGlow
-                      : "var(--ca-stone)",
-                  }}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 25 }}
-                >
+        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-white/14 bg-black/35 p-1.5 backdrop-blur-xl">
+          {SKIN_TYPE_META.map((item) => {
+            const active = value.type === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onChange({ ...value, type: item.id })}
+                className={`relative rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-200 ${
+                  active ? "text-[#141210]" : "text-[#C4BDB3] hover:text-white"
+                }`}
+              >
+                {active && (
                   <motion.span
-                    style={{ color: isSelected ? "white" : data.accentColor }}
-                    initial={{ rotate: -180 }}
-                    animate={{ rotate: 0 }}
-                    transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-                  >
-                    {data.icon}
-                  </motion.span>
-                </motion.div>
+                    layoutId="compact-skin-pill"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 rounded-full bg-[#F7F4EF]"
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  {item.label}
+                  {youcamDetected === item.id && (
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        active ? "bg-[#141210]" : "bg-[#E5C185]"
+                      }`}
+                    />
+                  )}
+                </span>
+              </button>
+            );
+          })}
 
-                {/* Label & Description */}
-                <div className="mb-3">
-                  <h4 className="font-semibold text-lg text-[var(--ca-obsidian)]">
-                    {data.label}
-                  </h4>
-                  <p className="text-body-sm text-[var(--ca-slate)] mt-0.5">
-                    {data.description}
-                  </p>
-                </div>
+          <div className="mx-1 h-4 w-px bg-white/15" />
 
-                {/* Traits */}
-                <div className="mb-4 space-y-1.5">
-                  {data.traits.map((trait, i) => (
-                    <motion.div
-                      key={trait}
-                      className="flex items-center gap-2 text-body-sm text-[var(--ca-slate-light)]"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + i * 0.05 }}
-                    >
-                      <div
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: data.accentColor }}
-                      />
-                      {trait}
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Needs summary */}
-                <div className="pt-3 border-t border-[var(--ca-border)]">
-                  <p className="text-xs font-medium text-[var(--ca-slate-light)] uppercase tracking-wider mb-2">
-                    Recommended Vehicle & Actives
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {data.needs.slice(0, 2).map((need, i) => (
-                      <motion.span
-                        key={need}
-                        className="text-xs px-2.5 py-1 rounded-full"
-                        style={{
-                          backgroundColor: data.accentGlow,
-                          color: data.accentColor,
-                          border: `1px solid ${data.accentColor}33`,
-                        }}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.25 + i * 0.05 }}
-                      >
-                        {need}
-                      </motion.span>
-                    ))}
-                    {data.needs.length > 2 && (
-                      <motion.span
-                        className="text-xs px-2.5 py-1 rounded-full text-[var(--ca-slate-light)]"
-                        style={{
-                          backgroundColor: "var(--ca-stone)",
-                          border: "1px solid var(--ca-border)",
-                        }}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.35 }}
-                      >
-                        +{data.needs.length - 2} more
-                      </motion.span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </TiltCard>
-          );
-        })}
-      </div>
-
-      {/* Sensitivity Toggle */}
-      <motion.div
-        className="mt-6 glass-card p-5 rounded-xl"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                backgroundColor: value.sensitive
-                  ? "var(--ca-crimson-glow)"
-                  : "var(--ca-stone)",
-              }}
-            >
-              <AlertTriangle
-                className="h-6 w-6"
-                style={{
-                  color: value.sensitive
-                    ? "var(--ca-crimson)"
-                    : "var(--ca-slate-light)",
-                }}
-              />
-            </div>
-            <div>
-              <h4 className="font-semibold text-[var(--ca-obsidian)]">
-                Sensitive / Reactive Barrier
-              </h4>
-              <p className="text-body-sm text-[var(--ca-slate)]">
-                Redness, stinging, fragrance intolerance
-              </p>
-            </div>
-          </div>
           <button
-            onClick={() => onChange({ ...value, sensitive: !value.sensitive })}
-            className="relative w-14 h-8 rounded-full transition-all duration-200 flex items-center"
-            style={{
-              backgroundColor: value.sensitive
-                ? "var(--ca-crimson)"
-                : "var(--ca-border)",
-            }}
-            aria-label={value.sensitive ? "Disable sensitive mode" : "Enable sensitive mode"}
+            type="button"
+            onClick={() =>
+              onChange({
+                ...value,
+                sensitive: isSensitive ? "normal" : "sensitive",
+              })
+            }
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+              isSensitive
+                ? "border border-[#F87171]/50 bg-[#F87171]/20 text-[#FCA5A5]"
+                : "text-[#8A8177] hover:text-[#C4BDB3]"
+            }`}
           >
-            <motion.div
-              className="absolute w-6 h-6 rounded-full bg-white shadow-lg flex items-center justify-center"
-              style={{
-                left: value.sensitive ? "calc(100% - 10px)" : "4px",
-                boxShadow: value.sensitive
-                  ? "0 2px 8px rgba(153,27,27,0.3)"
-                  : "0 2px 8px rgba(20,22,21,0.15)",
-              }}
-              animate={{ x: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            >
-              <Check
-                className="h-4 w-4"
-                style={{ color: value.sensitive ? "var(--ca-crimson)" : "transparent" }}
-              />
-            </motion.div>
+            <ShieldAlert className="h-3.5 w-3.5"/>
+            Sensitive Barrier
           </button>
         </div>
 
-        <AnimatePresence mode="popLayout">
-          {value.sensitive && (
-            <motion.div
-              className="mt-4 p-4 rounded-xl"
-              style={{ backgroundColor: "var(--ca-crimson-glow)", border: "1px solid var(--ca-crimson-glow)" }}
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: "var(--ca-crimson)" }} />
-                <div className="text-body-sm text-[var(--ca-crimson)] space-y-1">
-                  <p><strong>Strictly avoiding:</strong> Fragrance, essential oils, high-% glycolic acid, harsh retinoids</p>
-                  <p><strong>Prioritizing:</strong> Centella Asiatica, Azelaic Acid, Panthenol, Ceramides</p>
-                  <p>All shelf conflicts and recommendations will recalculate with this sensitivity filter.</p>
-                </div>
-              </div>
-            </motion.div>
+        <p className="text-xs text-[#C4BDB3]/90">
+          <span className="font-medium text-[#E5C185]">{activeMeta.label} Protocol:</span>{" "}
+          {activeMeta.vehicleRule}.{" "}
+          {isSensitive && (
+            <span className="text-[#FCA5A5]">
+              · Reactive Barrier Active (blocks fragrance & high-strength acids).
+            </span>
           )}
-        </AnimatePresence>
-      </motion.div>
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-2xl border border-white/12 bg-white/[0.035] p-5 backdrop-blur-2xl ${className}`}
+    >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-[#E5C185]">
+              Biometric Skin Profile
+            </span>
+            {youcamDetected && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#34D399]/30 bg-[#34D399]/10 px-2.5 py-0.5 font-mono-tech text-[10px] text-[#34D399]">
+                <Sparkles className="h-3 w-3"/>
+                YouCam AI: {youcamDetected.toUpperCase()}
+              </span>
+            )}
+          </div>
+          <h3 className="mt-1 font-serif-editorial text-2xl font-normal text-[#F7F4EF]">
+            Calibrate Formulation Vehicles & Active Thresholds
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              ...value,
+              sensitive: isSensitive ? "normal" : "sensitive",
+            })
+          }
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-all ${
+            isSensitive
+              ? "border-[#F87171]/60 bg-[#F87171]/15 text-[#FCA5A5] shadow-[0_0_25px_rgba(248,113,113,0.2)]"
+              : "border-white/15 bg-white/[0.04] text-[#C4BDB3] hover:border-white/30 hover:text-white"
+          }`}
+        >
+          <ShieldAlert className="h-4 w-4"/>
+          <span>Sensitive / Reactive Barrier: {isSensitive ? "ON" : "OFF"}</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {SKIN_TYPE_META.map((item) => {
+          const Icon = item.icon;
+          const active = value.type === item.id;
+          const isAiMatch = youcamDetected === item.id;
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onChange({ ...value, type: item.id })}
+              className={`group relative flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 ${
+                active
+                  ? "border-[#F7F4EF] bg-[#F7F4EF] text-[#141210] shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
+                  : "border-white/10 bg-white/[0.03] text-[#F7F4EF] hover:border-white/25 hover:bg-white/[0.06]"
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                      active ? "bg-[#141210] text-[#F7F4EF]" : "bg-white/10 text-[#E5C185]"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4"/>
+                  </div>
+                  {isAiMatch && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-mono-tech text-[10px] uppercase ${
+                        active
+                          ? "bg-[#141210]/15 text-[#141210]"
+                          : "bg-[#E5C185]/15 text-[#E5C185]"
+                      }`}
+                    >
+                      AI Match
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-3 font-serif-editorial text-xl font-medium">
+                  {item.label} Skin
+                </div>
+                <p
+                  className={`mt-0.5 text-xs ${
+                    active ? "text-[#141210]/75" : "text-[#C4BDB3]"
+                  }`}
+                >
+                  {item.traits}
+                </p>
+              </div>
+
+              <div
+                className={`mt-4 border-t pt-2.5 text-[11px] leading-relaxed ${
+                  active
+                    ? "border-[#141210]/15 text-[#141210]/85"
+                    : "border-white/10 text-[#8A8177]"
+                }`}
+              >
+                <div className="font-medium">{item.vehicleRule}</div>
+                <div className="mt-0.5 opacity-80">{item.avoids}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+export default SkinTypeSelector;

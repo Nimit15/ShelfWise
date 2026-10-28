@@ -1,467 +1,364 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Sparkles, Shield, TrendingDown, ArrowUpRight, Download, RefreshCw } from "lucide-react";
-import { ParsedScan } from "@/lib/mock-scan";
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  ChevronLeft,
+  ShoppingCart,
+  TrendingUp,
+  Shield,
+  Package,
+  BarChart3,
+  CheckCircle,
+  Wallet,
+  Calendar,
+  ExternalLink,
+  RefreshCw,
+  Award,
+} from "lucide-react";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { EngineOutput, ShelfProduct } from "@/types/engine";
+import { FunctionalRole } from "@/data/catalog";
 
-interface VerdictViewProps {
-  engineResult: any;
-  scan: ParsedScan;
+import { YouCamConcern, YouCamSkinType } from "@/types/youcam";
+
+export interface VerdictViewProps {
+  engineResult: EngineOutput | null;
+  scan: { concerns: YouCamConcern[]; skinType: YouCamSkinType; skinAge: number; overallScore: number };
   onRestart: () => void;
   onBack: () => void;
+  onHome: () => void;
 }
 
-export function VerdictView({ engineResult, scan, onRestart, onBack }: VerdictViewProps) {
-  const verdict = engineResult?.verdict;
-  const isBuyNothing = verdict?.type === "buy_nothing";
+function verdictIcon(type: EngineOutput["verdict"]["type"]): React.ElementType {
+  switch (type) {
+    case "buy_nothing": return Award;
+    case "minimal_addition": return ShoppingCart;
+    case "targeted_addition": return TrendingUp;
+    default: return Shield;
+  }
+}
 
-  const keepProducts = engineResult?.finalRoutine?.AM?.concat(engineResult?.finalRoutine?.PM || []) || [];
-  const pauseProducts = engineResult?.biometricConflicts?.map((c: any) => c.productName) || [];
-  const addProducts = engineResult?.gapRecommendations?.map((r: any) => r.recommendedProduct).filter(Boolean) || [];
+function verdictColor(type: EngineOutput["verdict"]["type"]): string {
+  switch (type) {
+    case "buy_nothing": return "text-[#34D399] bg-[#34D399]/10 border-[#34D399]/40";
+    case "minimal_addition": return "text-[#E5C185] bg-[#E5C185]/10 border-[#E5C185]/40";
+    case "targeted_addition": return "text-[#2ECC71] bg-[#2ECC71]/10 border-[#2ECC71]/40";
+    default: return "text-[#8A8177] bg-white/5 border-white/10";
+  }
+}
+
+function verdictDescription(type: EngineOutput["verdict"]["type"]): string {
+  switch (type) {
+    case "buy_nothing":
+      return "Your existing shelf fully addresses your clinical needs. No new purchases required — save your budget for treatments.";
+    case "minimal_addition":
+      return "A small gap exists in your routine. One targeted addition will complete your shelf without redundancy.";
+    case "targeted_addition":
+      return "Multiple gaps detected. Targeted additions will complete your routine with maximum clinical impact.";
+    default:
+      return "Analysis complete.";
+  }
+}
+
+function roleLabel(role: FunctionalRole): string {
+  return role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+export function VerdictView({
+  engineResult,
+  scan,
+  onRestart,
+  onBack,
+  onHome,
+}: VerdictViewProps) {
+  if (!engineResult) {
+    return (
+      <div className="min-h-screen bg-[#161310]">
+        <div className="atelier-studio-backdrop" />
+        <div className="relative mx-auto max-w-6xl px-4 py-8">
+          <p className="font-serif-editorial text-center text-lg text-[#F7F4EF]">
+            No verdict data available.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { verdict, finalRoutine, auditTrail } = engineResult;
+  const Icon = verdictIcon(verdict.type);
+  const colorClass = verdictColor(verdict.type);
+  const totalSaved = verdict.moneySavedInr;
 
   return (
-    <div className="min-h-screen bg-[var(--ca-studiomid)] relative overflow-hidden">
-      {/* Ambient Glow */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-15 blur-[200px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-skin-neutral) 0%, transparent 70%)" }} />
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-10 blur-[150px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-gold-warm) 0%, transparent 70%)" }} />
-        {isBuyNothing && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 blur-[200px]"
-            style={{ background: "radial-gradient(ellipse at center, var(--ca-success) 0%, transparent 70%)" }} />
-        )}
-      </div>
+    <div className="min-h-screen bg-[#161310]">
+      <div className="atelier-studio-backdrop" />
 
-      {/* Top Navigation */}
-      <header className="relative z-20 w-full border-b border-[var(--ca-stone-border)] bg-[var(--ca-studiomid)]/80 backdrop-blur-xl">
-        <div className="atelier-container flex h-16 items-center justify-between">
-          <nav className="flex items-center gap-6" aria-label="Atelier stages">
-            <span className="atelier-stage-indicator" data-stage="1">
-              <span className="text-mono-lg">01</span> Skin Telemetry
-            </span>
-            <span className="atelier-stage-indicator" data-stage="2">
-              <span className="text-mono-lg">02</span> Bio-Shelf Audit
-            </span>
-            <span className="atelier-stage-indicator active" data-stage="3">
-              <span className="text-mono-lg">03</span> Formulation Ledger
-            </span>
-          </nav>
-
-          <h1 className="text-h2 font-light tracking-tight" style={{ fontFamily: "var(--font-cormorant)" }}>
-            ShelfWise Atelier
-          </h1>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-1.5 bg-[var(--ca-glass-bg)] border border-[var(--ca-glass-border)] rounded-full px-3 py-1.5 backdrop-blur-xl">
-              <span className="text-body-sm text-[var(--ca-ink-subtle)]">₹ INR</span>
-              <span className="text-body-sm font-medium text-[var(--ca-paper)]">/</span>
-              <span className="text-body-sm text-[var(--ca-gold-warm)]">$ USD</span>
-            </div>
-            <button onClick={onBack} className="atelier-btn-ghost">
+      <div className="relative mx-auto max-w-6xl px-4 py-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-2 text-[#C4BDB3] hover:text-[#F7F4EF]"
+            >
               <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="font-mono-tech text-xs">Back to Audit</span>
+            </button>
+            <button
+              type="button"
+              onClick={onHome}
+              className="flex items-center gap-2 text-[#C4BDB3] hover:text-[#F7F4EF]"
+            >
+              <span className="font-mono-tech text-xs">Home</span>
             </button>
           </div>
-        </div>
-      </header>
 
-      <main className="relative z-10 flex-1 overflow-y-auto">
-        <div className="atelier-container py-8">
-          {/* Verdict Header */}
-          <div className="mb-12 animate-slide-up stagger-1 text-center">
-            <span className="text-subheading">Final Clinical Verdict</span>
-            <motion.h1
-              className="text-h1 font-light mt-2"
-              style={{ fontFamily: "var(--font-cormorant)" }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 600, delay: 0.1 }}
-            >
-              {isBuyNothing ? "Buy Nothing" : "Targeted Addition"}
-            </motion.h1>
+          <button
+            type="button"
+            onClick={onRestart}
+            className="flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 font-mono-tech text-xs text-[#C4BDB3] hover:border-white/25 hover:text-[#F7F4EF]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            New Analysis
+          </button>
+        </motion.div>
 
-            <motion.div
-              className="mt-4 flex items-center justify-center gap-3"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-            >
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isBuyNothing ? "bg-[var(--ca-success)]/20" : "bg-[var(--ca-gold-warm)]/20"}`}>
+        {/* Verdict Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-10"
+        >
+          <TiltCard stone className="p-8">
+            <div className="flex flex-col items-center gap-6 text-center">
+              <motion.div
+                className={`rounded-full p-4 ${colorClass}`}
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <Icon className="h-8 w-8" />
+              </motion.div>
+
+              <div>
+                <h1 className="font-serif-editorial mb-2 text-3xl text-[#F7F4EF]">
+                  Clinical Verdict
+                </h1>
+                <p className="font-serif-editorial text-2xl text-[#E5C185]">
+                  {verdict.type.replace(/_/g, " ").toUpperCase()}
+                </p>
+              </div>
+
+              <p className="max-w-2xl text-lg text-[#C4BDB3]">
+                {verdict.message}
+              </p>
+
+              {verdict.totalCostInr > 0 && (
                 <motion.div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    background: isBuyNothing ? "var(--ca-success)" : "var(--ca-gold-warm)",
-                    color: "var(--ca-paper)",
-                  }}
-                  initial={{ rotate: -180, scale: 0.5 }}
-                  animate={{ rotate: 0, scale: 1 }}
-                  transition={{ delay: 0.3, type: "spring", stiffness: 400, damping: 20 }}
+                  className="rounded-xl border border-[#E5C185]/30 bg-[#E5C185]/5 px-6 py-3"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
                 >
-                  {isBuyNothing ? (
-                    <CheckCircle className="h-6 w-6" />
-                  ) : (
-                    <AlertCircle className="h-6 w-6" />
-                  )}
+                  <span className="font-mono-tech text-xs uppercase tracking-[0.1em] text-[#8A8177]">
+                    Recommended Spend
+                  </span>
+                  <div className="font-serif-editorial mt-1 text-2xl text-[#E5C185]">
+                    ₹{verdict.totalCostInr.toFixed(0)}
+                  </div>
+                  <span className="font-mono-tech text-[10px] text-[#8A8177]">
+                    (${verdict.totalCostUsd.toFixed(2)} USD)
+                  </span>
                 </motion.div>
+              )}
+
+              {totalSaved > 0 && (
+                <motion.div
+                  className="flex items-center gap-2 text-[#2ECC71]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <Wallet className="h-4 w-4" />
+                  <span className="font-mono-tech text-sm">
+                    Potential savings: ₹{totalSaved.toFixed(0)}
+                  </span>
+                </motion.div>
+              )}
+            </div>
+          </TiltCard>
+        </motion.div>
+
+        {/* Audit Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-10"
+        >
+          <h2 className="font-serif-editorial mb-4 text-xl text-[#F7F4EF]">
+            Audit Summary
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <TiltCard className="p-4 text-center">
+              <Package className="mx-auto mb-2 h-5 w-5 text-[#E5C185]" />
+              <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                Products
               </div>
-            </motion.div>
-
-            <motion.p
-              className="mt-6 text-h2 font-medium text-[var(--ca-gold-warm)]"
-              style={{ fontFamily: "var(--font-fira-code)" }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              ₹{verdict?.totalCostInr || 0} Needed
-            </motion.p>
-
-            <motion.p
-              className="mt-4 max-w-2xl mx-auto text-body text-[var(--ca-ink-muted)] leading-relaxed"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              {verdict?.message || (isBuyNothing
-                ? "Your existing shelf already safely covers all priority concerns. No new products needed — your regimen is clinically sound and cost-optimal."
-                : "Your shelf has gaps. The recommended additions address your highest-priority concerns. Review ingredient compatibility before purchasing.")}
-            </motion.p>
-          </div>
-
-          {/* Cost Breakdown Ledger */}
-          <div className="mb-12 animate-slide-up stagger-2">
-            <div className="grid gap-4 md:grid-cols-3">
-              <CostLedgerCard
-                title="Current Shelf Value"
-                inr={engineResult?.auditTrail?.productsAnalyzed ? engineResult.auditTrail.productsAnalyzed * 799 : 0}
-                usd={engineResult?.auditTrail?.productsAnalyzed ? engineResult.auditTrail.productsAnalyzed * 10 : 0}
-                note="Estimated retail per product"
-                accent="var(--ca-ink-subtle)"
-                icon={Sparkles}
-              />
-              <CostLedgerCard
-                title="New Purchases"
-                inr={verdict?.totalCostInr || 0}
-                usd={verdict?.totalCostUsd || 0}
-                note={isBuyNothing ? "Nothing to purchase" : "Recommended additions"}
-                accent={isBuyNothing ? "var(--ca-success)" : "var(--ca-gold-warm)"}
-                icon={isBuyNothing ? Shield : ArrowUpRight}
-                highlight={isBuyNothing}
-              />
-              <CostLedgerCard
-                title="Money Saved"
-                inr={verdict?.moneySavedInr || 0}
-                usd={verdict?.moneySavedUsd || 0}
-                note="vs. generic 6-product routine"
-                accent="var(--ca-success)"
-                icon={TrendingDown}
-                highlight
-              />
-            </div>
-          </div>
-
-          {/* Three-Column Verdict Ledger */}
-          <div className="mb-12 animate-slide-up stagger-3">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">Formulation Ledger</span>
-                <h2 className="text-h2 font-light mt-1">Keep · Pause · Add</h2>
+              <div className="font-serif-editorial mt-1 text-xl text-[#F7F4EF]">
+                {auditTrail.productsAnalyzed}
               </div>
-            </div>
+            </TiltCard>
 
-            <div className="grid gap-6 md:grid-cols-3">
-              {/* KEEP COLUMN */}
-              <VerdictColumn
-                title="Keep Using"
-                subtitle={`${keepProducts.length} products`}
-                icon={Shield}
-                accent="var(--ca-success)"
-                items={keepProducts.map((p: any) => ({
-                  name: p.productName,
-                  role: p.role.replace(/_/g, " "),
-                  step: p.step,
-                  cost: "₹0",
-                }))}
-                emptyMessage="All current products retained"
-              />
+            <TiltCard className="p-4 text-center">
+              <Shield className="mx-auto mb-2 h-5 w-5 text-[#F87171]" />
+              <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                Conflicts
+              </div>
+              <div className="font-serif-editorial mt-1 text-xl text-[#F87171]">
+                {auditTrail.conflictsFound}
+              </div>
+            </TiltCard>
 
-              {/* PAUSE COLUMN */}
-              <VerdictColumn
-                title="Pause / Conflict Alert"
-                subtitle={`${pauseProducts.length} products`}
-                icon={AlertCircle}
-                accent="var(--ca-warning)"
-                items={engineResult?.biometricConflicts?.map((c: any) => ({
-                  name: c.productName,
-                  role: c.conflictType,
-                  step: c.severity,
-                  cost: "₹0",
-                  reason: c.explanation,
-                })) || []}
-                emptyMessage="No conflicts detected — barrier intact"
-              />
+            <TiltCard className="p-4 text-center">
+              <BarChart3 className="mx-auto mb-2 h-5 w-5 text-[#E5C185]" />
+              <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                Redundancies
+              </div>
+              <div className="font-serif-editorial mt-1 text-xl text-[#E5C185]">
+                {auditTrail.redundanciesFound}
+              </div>
+            </TiltCard>
 
-              {/* ADD COLUMN */}
-              <VerdictColumn
-                title={isBuyNothing ? "Minimal Addition" : "Buy Nothing Cart"}
-                subtitle={`${addProducts.length} products`}
-                icon={Sparkles}
-                accent="var(--ca-gold-warm)"
-                items={addProducts.map((p: any) => ({
-                  name: p.name,
-                  role: p.roles[0]?.replace(/_/g, " ") || "Active",
-                  step: `₹${p.priceInr}`,
-                  cost: `₹${p.priceInr}`,
-                  reason: p.description,
-                }))}
-                emptyMessage={isBuyNothing ? "Your regimen is complete" : "No additions required"}
-              />
-            </div>
+            <TiltCard className="p-4 text-center">
+              <Award className="mx-auto mb-2 h-5 w-5 text-[#34D399]" />
+              <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                Gaps
+              </div>
+              <div className="font-serif-editorial mt-1 text-xl text-[#34D399]">
+                {auditTrail.gapsIdentified}
+              </div>
+            </TiltCard>
+
+            <TiltCard className="p-4 text-center">
+              <Shield className="mx-auto mb-2 h-5 w-5 text-[#2ECC71]" />
+              <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+                Compat Score
+              </div>
+              <div className="font-serif-editorial mt-1 text-xl text-[#2ECC71]">
+                {auditTrail.compatibilityScore.toFixed(0)}
+              </div>
+            </TiltCard>
           </div>
+        </motion.div>
 
-          {/* Routine Schedule */}
-          {engineResult?.finalRoutine && (
-            <div className="mb-12 animate-slide-up stagger-4">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <span className="text-subheading">Clinical Protocol</span>
-                  <h2 className="text-h2 font-light mt-1">AM / PM Routine Schedule</h2>
+        {/* Final Routine */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-10"
+        >
+          <h2 className="font-serif-editorial mb-4 text-xl text-[#F7F4EF]">
+            Final Routine
+          </h2>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {(["AM", "PM"] as const).map((period) => (
+              <TiltCard key={period} className="p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <div
+                    className={`rounded-lg p-1.5 ${
+                      period === "AM"
+                        ? "bg-[#E5C185]/10 text-[#E5C185]"
+                        : "bg-[#34D399]/10 text-[#34D399]"
+                    }`}
+                  >
+                    {period === "AM" ? (
+                      <Calendar className="h-4 w-4" />
+                    ) : (
+                      <Calendar className="h-4 w-4" />
+                    )}
+                  </div>
+                  <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                    {period} Routine
+                  </h3>
                 </div>
-              </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <RoutineScheduleColumn
-                  title="AM Protocol"
-                  items={engineResult.finalRoutine.AM}
-                  accent="var(--ca-gold-warm)"
-                  icon={Sparkles}
-                />
-                <RoutineScheduleColumn
-                  title="PM Protocol"
-                  items={engineResult.finalRoutine.PM}
-                  accent="var(--ca-skin-neutral)"
-                  icon={Shield}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Audit Trail */}
-          <div className="mb-12 animate-slide-up stagger-5">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">Audit Trail</span>
-                <h2 className="text-h2 font-light mt-1">Quantified Analysis</h2>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              <AuditTrailCard
-                title="Products Analyzed"
-                value={String(engineResult?.auditTrail?.productsAnalyzed || 0)}
-                icon={Sparkles}
-                accent="var(--ca-ink-subtle)"
-              />
-              <AuditTrailCard
-                title="Biometric Conflicts"
-                value={String(engineResult?.auditTrail?.conflictsFound || 0)}
-                icon={AlertCircle}
-                accent="var(--ca-crimson)"
-              />
-              <AuditTrailCard
-                title="Chemical Conflicts"
-                value={String((engineResult?.chemicalConflicts?.length || 0))}
-                icon={Shield}
-                accent="var(--ca-warning)"
-              />
-              <AuditTrailCard
-                title="Redundancies"
-                value={String(engineResult?.auditTrail?.redundanciesFound || 0)}
-                icon={RefreshCw}
-                accent="var(--ca-gold-warm)"
-              />
-              <AuditTrailCard
-                title="Gaps Addressed"
-                value={String(engineResult?.auditTrail?.gapsIdentified || 0)}
-                icon={ArrowUpRight}
-                accent="var(--ca-success)"
-              />
-            </div>
-          </div>
-
-          {/* CTA */}
-          <div className="flex justify-center gap-4 animate-slide-up stagger-6">
-            <button
-              onClick={onRestart}
-              className="atelier-btn-secondary w-full max-w-xs"
-            >
-              <RefreshCw className="h-4 w-4" />
-              New Analysis
-            </button>
-            <button
-              onClick={onRestart}
-              className="atelier-btn-primary w-full max-w-xs"
-            >
-              <Download className="h-4 w-4" />
-              Export Ledger
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function CostLedgerCard({
-  title,
-  inr,
-  usd,
-  note,
-  accent,
-  icon: Icon,
-  highlight = false,
-}: {
-  title: string;
-  inr: number;
-  usd: number;
-  note: string;
-  accent: string;
-  icon: React.ComponentType<{ className?: string }>;
-  highlight?: boolean;
-}) {
-  return (
-    <motion.div
-      className={`atelier-glass-elevated p-6 ${highlight ? "ring-2" : ""}`}
-      style={{
-        borderColor: highlight ? accent : "var(--ca-glass-border)",
-        boxShadow: highlight
-          ? `0 0 0 1px ${accent}, 0 12px 48px ${accent}33`
-          : undefined,
-      }}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 500 }}
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}20` }}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <h3 className="text-body-sm text-[var(--ca-ink-subtle)]">{title}</h3>
-      </div>
-      <div className="mb-2">
-        <span className="text-h1 font-bold text-[var(--ca-paper)]" style={{ fontFamily: "var(--font-fira-code)" }}>₹{inr.toLocaleString()}</span>
-        <span className="ml-3 text-body text-[var(--ca-ink-subtle)]">/</span>
-        <span className="ml-3 text-h1 font-bold text-[var(--ca-gold-warm)]" style={{ fontFamily: "var(--font-fira-code)" }}>${usd.toLocaleString()}</span>
-      </div>
-      <p className="text-body-xs text-[var(--ca-ink-faint)]">{note}</p>
-    </motion.div>
-  );
-}
-
-function VerdictColumn({
-  title,
-  subtitle,
-  icon: Icon,
-  accent,
-  items,
-  emptyMessage,
-}: {
-  title: string;
-  subtitle: string;
-  icon: React.ComponentType<{ className?: string }>;
-  accent: string;
-  items: Array<{ name: string; role: string; step: string | number; cost: string; reason?: string }>;
-  emptyMessage: string;
-}) {
-  return (
-    <div className="atelier-verdict-column">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}20` }}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <h3 className="text-h3 font-light text-[var(--ca-paper)]">{title}</h3>
-          <p className="text-body-sm text-[var(--ca-ink-subtle)]">{subtitle}</p>
-        </div>
-      </div>
-
-      {items.length > 0 ? (
-        <div className="space-y-3">
-          {items.map((item, i) => (
-            <motion.div
-              key={i}
-              className="p-4 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--ca-glass-border)" }}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 + i * 0.08 }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[var(--ca-paper)] truncate">{item.name}</p>
-                  <p className="text-body-xs text-[var(--ca-ink-subtle)] mt-0.5">{item.role}</p>
-                  {item.reason && (
-                    <p className="text-body-xs text-[var(--ca-ink-faint)] mt-1 line-clamp-2">{item.reason}</p>
+                <div className="space-y-2">
+                  {finalRoutine[period].map((step) => (
+                    <div
+                      key={`${step.productId}-${step.step}`}
+                      className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/30 p-3"
+                    >
+                      <span className="font-mono-tech text-xs text-[#8A8177]">
+                        Step {step.step}:
+                      </span>
+                      <div className="flex-1">
+                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {step.productName}
+                        </span>
+                        <span className="font-mono-tech text-[10px] text-[#8A8177]">
+                          {" · " + roleLabel(step.role)}
+                        </span>
+                      </div>
+                      <span className="font-mono-tech text-xs text-[#34D399]">
+                        ✓
+                      </span>
+                    </div>
+                  ))}
+                  {finalRoutine[period].length === 0 && (
+                    <span className="font-mono-tech text-xs text-[#8A8177]">
+                      No products in this period.
+                    </span>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-mono text-[var(--ca-gold-warm)]">{item.cost}</span>
-                  <span className="text-body-xs text-[var(--ca-ink-faint)]">{item.step}</span>
-                </div>
+              </TiltCard>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Clinical Notes */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <TiltCard className="p-6">
+            <h3 className="font-serif-editorial mb-3 text-lg text-[#F7F4EF]">
+              Clinical Notes
+            </h3>
+            <div className="space-y-3 text-sm text-[#C4BDB3]">
+              <p>
+                {verdictDescription(verdict.type)}
+              </p>
+              <p>
+                Analysis based on {scan.concerns.filter((c: { type: string }) => c.type !== "hd_skin_type").length} biometric concern channels,
+                skin type {scan.skinType.type}, age {scan.skinAge}, barrier load score {auditTrail.barrierLoadScore.toFixed(1)}.
+              </p>
+              <div className="flex items-center gap-2 pt-2">
+                <CheckCircle className="h-4 w-4 text-[#34D399]" />
+                <span>
+                  Report generated on {new Date().toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </span>
               </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="py-12 text-center">
-          <Icon className="mx-auto mb-3 h-8 w-8" />
-          <p className="text-body text-[var(--ca-ink-subtle)]">{emptyMessage}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RoutineScheduleColumn({ title, items, accent, icon: Icon }: { title: string; items: any[]; accent: string; icon: React.ComponentType<{ className?: string }> }) {
-  if (!items?.length) return null;
-
-  return (
-    <div className="atelier-glass-elevated p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}20` }}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <h3 className="text-h3 font-light">{title}</h3>
+            </div>
+          </TiltCard>
+        </motion.div>
       </div>
-      <ol className="space-y-3">
-        {items.map((item) => (
-          <li key={item.productId} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--ca-glass-border)" }}>
-            <span
-              className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-mono"
-              style={{ background: accent, color: "var(--ca-ink)" }}
-            >
-              {item.step}
-            </span>
-            <span className="text-body text-[var(--ca-paper)]">{item.productName}</span>
-            <span className="ml-auto text-body-xs text-[var(--ca-ink-faint)] uppercase tracking-wider">{item.role.replace(/_/g, " ")}</span>
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }
 
-function AuditTrailCard({ title, value, icon: Icon, accent }: { title: string; value: string; icon: React.ComponentType<{ className?: string }>; accent: string }) {
-  return (
-    <div className="atelier-glass p-5 text-center">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: `${accent}20` }}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <p className="text-h2 font-bold text-[var(--ca-paper)]" style={{ fontFamily: "var(--font-fira-code)" }}>
-        {value}
-      </p>
-      <p className="text-body-xs text-[var(--ca-ink-faint)] mt-1">{title}</p>
-    </div>
-  );
-}
+export default VerdictView;

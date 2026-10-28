@@ -1,74 +1,82 @@
 "use client";
 
-import { useState, useRef } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Package, Search, Settings, FileText, FlaskConical, TestTube2, Sparkles, User, Users, GraduationCap, Minus, Shield, AlertTriangle, CheckCircle2, ChevronRight, Download, Upload, X } from "lucide-react";
-import { ShelfProduct } from "@/types/engine";
-import { ParsedScan } from "@/lib/mock-scan";
-import { ProductCard } from "@/components/audit/product-card";
-import { ConflictList } from "@/components/audit/conflict-list";
-import { ShelfControls } from "@/components/audit/shelf-controls";
-import { SkinTypeSelector, SkinType, Sensitivity } from "@/components/shelf/SkinTypeSelector";
-import { CATALOG, Product } from "@/data/catalog";
+import {
+  ChevronLeft,
+  AlertTriangle,
+  CheckCircle,
+  Package,
+  ShoppingCart,
+  Droplets,
+  Sun,
+  Shield,
+  Sparkles,
+  BarChart3,
+  Zap,
+  TrendingUp,
+  ExternalLink,
+  Settings,
+  Banknote,
+} from "lucide-react";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { SkinTypeSelector, SkinType, SkinProfile } from "@/components/shelf/SkinTypeSelector";
+import { ShelfProduct, EngineOutput, EngineConstraints, BiometricConflict, ChemicalConflict, RedundancyAlert, GapRecommendation } from "@/types/engine";
+import { FunctionalRole } from "@/data/catalog";
 
-interface ShelfAuditViewProps {
-  scan: ParsedScan;
-  engineResult: any;
+import { YouCamConcern, YouCamSkinType } from "@/types/youcam";
+
+export interface ShelfAuditViewProps {
+  scan: { concerns: YouCamConcern[]; skinType: YouCamSkinType; skinAge: number; overallScore: number };
+  engineResult: EngineOutput | null;
   shelf: ShelfProduct[];
   onShelfChange: (shelf: ShelfProduct[]) => void;
   onProductSelect: (id: string) => void;
   onVerdict: () => void;
   onBack: () => void;
-  constraints: any;
-  setConstraints: (c: any) => void;
-  skinProfile: { type: SkinType; sensitive: Sensitivity };
-  onSkinProfileChange: (profile: { type: SkinType; sensitive: Sensitivity }) => void;
+  onHome: () => void;
+  constraints: EngineConstraints;
+  setConstraints: (c: EngineConstraints) => void;
+  skinProfile: SkinProfile;
+  onSkinProfileChange: (profile: SkinProfile) => void;
 }
 
-function mapYouCamToSkinType(youCamType: string | undefined): SkinType {
-  if (!youCamType) return "normal";
-  const lower = youCamType.toLowerCase();
-  if (lower.includes("oily")) return "oily";
-  if (lower.includes("dry")) return "dry";
-  if (lower.includes("combination") || lower.includes("mix")) return "combination";
-  return "normal";
+function severityColor(severity: BiometricConflict["severity"]): string {
+  switch (severity) {
+    case "high": return "text-[#F87171] bg-[#F87171]/15 border border-[#F87171]/40";
+    case "medium": return "text-[#E5C185] bg-[#E5C185]/10 border border-[#E5C185]/40";
+    case "low": return "text-[#34D399] bg-[#34D399]/10 border border-[#34D399]/40";
+    default: return "text-[#8A8177] bg-white/5 border border-white/10";
+  }
 }
 
-const personas = [
-  {
-    id: "student",
-    title: "Over-Exfoliating Student",
-    subtitle: "Barrier compromised by actives overload",
-    icon: GraduationCap,
-    traits: ["3+ exfoliants active", "Daily glycolic + retinol", "Stripping foaming cleanser"],
-    conflicts: ["Barrier destruction", "Chemical irritation cascade", "Photosensitivity risk"],
-    color: "var(--ca-crimson)",
-    glow: "rgba(153,27,27,0.15)",
-    border: "rgba(153,27,27,0.3)",
-  },
-  {
-    id: "clutter",
-    title: "7-Step Clutter",
-    subtitle: "Redundant actives, wasted budget",
-    icon: Users,
-    traits: ["2 Vitamin C serums", "Niacinamide × 3 products", "Dual retinoid overlap"],
-    conflicts: ["Role redundancy × 4", "Ingredient incompatibility", "₹12,400/yr overspend"],
-    color: "var(--ca-warning)",
-    glow: "rgba(180,83,9,0.15)",
-    border: "rgba(180,83,9,0.3)",
-  },
-  {
-    id: "minimalist",
-    title: "Balanced Minimalist",
-    subtitle: "Clinically sound, cost-optimal",
-    icon: Shield,
-    traits: ["4 essential products", "AM/PM separation clean", "No conflicts detected"],
-    conflicts: ["Zero biometric conflicts", "Zero chemical conflicts", "₹0 needed"],
-    color: "var(--ca-success)",
-    glow: "rgba(15,83,56,0.15)",
-    border: "rgba(15,83,56,0.3)",
-  },
-];
+function conflictTypeIcon(conflictType: BiometricConflict["conflictType"]): React.ElementType {
+  switch (conflictType) {
+    case "barrier": return Shield;
+    case "irritancy": return Zap;
+    case "sensitivity": return Droplets;
+    default: return AlertTriangle;
+  }
+}
+
+function resolutionLabel(resolution: ChemicalConflict["resolution"]): string {
+  switch (resolution) {
+    case "separate_am_pm": return "Separate AM/PM";
+    case "alternate_days": return "Alternate Days";
+    case "pause_one": return "Pause One";
+    default: return resolution;
+  }
+}
+
+function roleLabel(role: FunctionalRole): string {
+  return role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+function priceDisplay(product: ShelfProduct, currency: "INR" | "USD"): string {
+  const price = currency === "INR" ? product.priceInr : product.priceUsd;
+  const symbol = currency === "INR" ? "₹" : "$";
+  return `${symbol}${price}`;
+}
 
 export function ShelfAuditView({
   scan,
@@ -78,591 +86,685 @@ export function ShelfAuditView({
   onProductSelect,
   onVerdict,
   onBack,
+  onHome,
   constraints,
   setConstraints,
   skinProfile,
   onSkinProfileChange,
 }: ShelfAuditViewProps) {
-  const [showINCIDrawer, setShowINCIDrawer] = useState(false);
-  const [inciText, setInciText] = useState("");
-  const [parsedINCI, setParsedINCI] = useState<string[]>([]);
-  const [activePersona, setActivePersona] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showSettings, setShowSettings] = React.useState(false);
 
-  const handleAddProduct = (product: Product) => {
-    const newProduct: ShelfProduct = { ...product };
-    onShelfChange([...shelf, newProduct]);
-    setShowAddModal(false);
-  };
+  if (!engineResult) {
+    return (
+      <div className="min-h-screen bg-[#161310]">
+        <div className="atelier-studio-backdrop" />
+        <div className="relative mx-auto max-w-6xl px-4 py-8">
+          <p className="font-serif-editorial text-center text-lg text-[#F7F4EF]">
+            No audit data available.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleRemoveProduct = (id: string) => {
-    onShelfChange(shelf.filter((p) => p.id !== id));
-  };
+  const {
+    biometricConflicts,
+    chemicalConflicts,
+    redundancyAlerts,
+    gapRecommendations,
+    finalRoutine,
+    verdict,
+    auditTrail,
+  } = engineResult;
 
-  const handleClearShelf = () => {
-    onShelfChange([]);
-  };
-
-  const parseINCI = (text: string) => {
-    const ingredients = text
-      .split(/[,;]/)
-      .map(i => i.trim())
-      .filter(i => i.length > 1);
-    setParsedINCI(ingredients);
-  };
-
-  const filteredCatalog = CATALOG.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.activeIngredients.some(ai => ai.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === "all" || p.roles.includes(selectedCategory as any);
-    return matchesSearch && matchesCategory && !shelf.some((s) => s.id === p.id);
-  });
-
-  const categories = ["all", "cleanser", "hydrator", "exfoliant_aha_bha", "retinoid", "antioxidant_vit_c", "barrier_repair", "azelaic_treatment", "niacinamide_pore", "eye_treatment", "sunscreen_spf"];
+  const activeConflicts = biometricConflicts.filter((c) => c.severity === "high").length;
+  const totalConflicts = biometricConflicts.length + chemicalConflicts.length;
+  const totalSaved = constraints.currency === "INR" ? verdict.moneySavedInr : verdict.moneySavedUsd;
+  const currencySymbol = constraints.currency === "INR" ? "₹" : "$";
 
   return (
-    <div className="min-h-screen bg-[var(--ca-studiomid)] relative overflow-hidden">
-      {/* Ambient Glow */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-15 blur-[200px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-skin-neutral) 0%, transparent 70%)" }} />
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-10 blur-[150px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-gold-warm) 0%, transparent 70%)" }} />
-      </div>
+    <div className="min-h-screen bg-[#161310] bg-[url('/grid-pattern.svg')] bg-[length:60px_60px] opacity-[0.02]">
+      <div className="atelier-studio-backdrop" />
 
-      {/* Top Navigation */}
-      <header className="relative z-20 w-full border-b border-[var(--ca-stone-border)] bg-[var(--ca-studiomid)]/80 backdrop-blur-xl">
-        <div className="atelier-container flex h-16 items-center justify-between">
-          <nav className="flex items-center gap-6" aria-label="Atelier stages">
-            <span className="atelier-stage-indicator" data-stage="1">
-              <span className="text-mono-lg">01</span> Skin Telemetry
-            </span>
-            <span className="atelier-stage-indicator active" data-stage="2">
-              <span className="text-mono-lg">02</span> Bio-Shelf Audit
-            </span>
-            <span className="atelier-stage-indicator" data-stage="3">
-              <span className="text-mono-lg">03</span> Formulation Ledger
-            </span>
-          </nav>
-
-          <h1 className="text-h2 font-light tracking-tight" style={{ fontFamily: "var(--font-cormorant)" }}>
-            ShelfWise Atelier
-          </h1>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-1.5 bg-[var(--ca-glass-bg)] border border-[var(--ca-glass-border)] rounded-full px-3 py-1.5 backdrop-blur-xl">
-              <span className="text-body-sm text-[var(--ca-ink-subtle)]">₹ INR</span>
-              <span className="text-body-sm font-medium text-[var(--ca-paper)]">/</span>
-              <span className="text-body-sm text-[var(--ca-gold-warm)]">$ USD</span>
-            </div>
-            <button onClick={onBack} className="atelier-btn-ghost">
+      <div className="relative mx-auto max-w-6xl px-4 py-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-2 text-[#C4BDB3] hover:text-[#F7F4EF]"
+            >
               <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="font-mono-tech text-xs">Back</span>
+            </button>
+            <button
+              type="button"
+              onClick={onHome}
+              className="flex items-center gap-2 text-[#C4BDB3] hover:text-[#F7F4EF]"
+            >
+              <span className="font-mono-tech text-xs">Home</span>
             </button>
           </div>
-        </div>
-      </header>
 
-      {/* INCI Drawer */}
-      <AnimatePresence>
-        {showINCIDrawer && (
-          <>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-xs font-mono-tech text-[#C4BDB3] hover:border-white/25 hover:text-[#F7F4EF]"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onVerdict}
+              className="flex items-center gap-2 rounded-full border border-[#E5C185]/30 bg-[#E5C185] px-4 py-2 font-mono-tech text-xs text-[#141210] transition-all hover:bg-[#E5C185]/90"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Final Verdict
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Audit Stats Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-5"
+        >
+          <div className="rounded-xl border border-[#F87171]/20 bg-[#F87171]/5 p-4 text-center">
+            <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#F87171]">
+              High Severity
+            </div>
+            <div className="font-serif-editorial mt-1 text-2xl text-[#F87171]">
+              {activeConflicts}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#E5C185]/20 bg-[#E5C185]/5 p-4 text-center">
+            <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#E5C185]">
+              Total Conflicts
+            </div>
+            <div className="font-serif-editorial mt-1 text-2xl text-[#E5C185]">
+              {totalConflicts}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#34D399]/20 bg-[#34D399]/5 p-4 text-center">
+            <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#34D399]">
+              Barrier Load
+            </div>
+            <div className="font-serif-editorial mt-1 text-2xl text-[#34D399]">
+              {auditTrail.barrierLoadScore.toFixed(1)}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#2ECC71]/20 bg-[#2ECC71]/5 p-4 text-center">
+            <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#2ECC71]">
+              Savings Identified
+            </div>
+            <div className="font-serif-editorial mt-1 text-2xl text-[#2ECC71]">
+              {currencySymbol}{totalSaved.toFixed(0)}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/12 bg-black/30 p-4 text-center">
+            <div className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#8A8177]">
+              Verdict
+            </div>
+            <div className="font-serif-editorial mt-1 text-xl text-[#F7F4EF]">
+              {verdict.type.replace(/_/g, " ")}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Skin Profile Calibration */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-8"
+        >
+          <TiltCard className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-[#E5C185]" />
+              <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                Skin Profile & Constraints
+              </h3>
+            </div>
+
+            <SkinTypeSelector
+              value={{
+                type: skinProfile.type,
+                sensitive: skinProfile.sensitive,
+              }}
+              onChange={(profile) => {
+                onSkinProfileChange(profile);
+              }}
+              youcamDetected={scan.skinType.type.toLowerCase() as SkinType}
+              compact
+            />
+
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177]">
+                  Budget ({constraints.currency})
+                </label>
+                <input
+                  type="number"
+                  value={constraints.currency === "INR" ? constraints.budgetInr : constraints.budgetUsd}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    const field = constraints.currency === "INR" ? "budgetInr" : "budgetUsd";
+                    setConstraints({ ...constraints, [field]: val });
+                  }}
+                  className="mt-1 w-full rounded-lg border border-white/12 bg-black/30 px-3 py-2 font-mono-tech text-sm text-[#F7F4EF] focus:border-[#E5C185] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177]">
+                  Currency
+                </label>
+                <select
+                  value={constraints.currency}
+                  onChange={(e) => setConstraints({ ...constraints, currency: e.target.value as "INR" | "USD" })}
+                  className="mt-1 w-full rounded-lg border border-white/12 bg-black/30 px-3 py-2 font-mono-tech text-sm text-[#F7F4EF] focus:border-[#E5C185] focus:outline-none"
+                >
+                  <option value="INR">INR (₹)</option>
+                  <option value="USD">USD ($)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177]">
+                  Routine Preference
+                </label>
+                <select
+                  value={constraints.routinePreference}
+                  onChange={(e) => setConstraints({ ...constraints, routinePreference: e.target.value as "minimalist" | "targeted" })}
+                  className="mt-1 w-full rounded-lg border border-white/12 bg-black/30 px-3 py-2 font-mono-tech text-sm text-[#F7F4EF] focus:border-[#E5C185] focus:outline-none"
+                >
+                  <option value="minimalist">Minimalist</option>
+                  <option value="targeted">Targeted</option>
+                </select>
+              </div>
+            </div>
+          </TiltCard>
+        </motion.div>
+
+        {/* Conflicts Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-8"
+        >
+          <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
+            Bio-Inventory Conflicts
+          </h2>
+
+          <AnimatePresence>
             <motion.div
-              className="atelier-diagnostic-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowINCIDrawer(false)}
-            />
-            <motion.div
-              className="atelier-diagnostic-panel atelier-glass-elevated p-6 max-w-2xl w-full mx-4"
-              initial={{ opacity: 0, y: 40, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="space-y-4"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-h3 font-light">INCI Formulation Studio</h2>
-                <button onClick={() => setShowINCIDrawer(false)} className="atelier-btn-ghost p-2">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <textarea
-                value={inciText}
-                onChange={(e) => {
-                  setInciText(e.target.value);
-                  parseINCI(e.target.value);
-                }}
-                placeholder="Paste full INCI list here…&#10;e.g., Water, Niacinamide, Zinc PCA, Glycerin, Ceramide NP, Panthenol, Dimethicone, Carbomer, Phenoxyethanol"
-                className="atelier-input mb-4 min-h-[120px] font-mono text-sm resize-none"
-                rows={4}
-              />
-
-              {parsedINCI.length > 0 && (
-                <div className="max-h-60 overflow-y-auto">
-                  <p className="text-body-sm text-[var(--ca-ink-subtle)] mb-3">Parsed Ingredients ({parsedINCI.length})</p>
-                  <div className="flex flex-wrap gap-2">
-                    {parsedINCI.map((ing, i) => (
-                      <motion.span
-                        key={i}
-                        className="text-body-xs px-3 py-1.5 rounded-full"
-                        style={{
-                          background: "rgba(255,255,255,0.05)",
-                          border: "1px solid var(--ca-glass-border)",
-                          color: "var(--ca-ink-muted)",
-                        }}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.02 }}
-                      >
-                        {ing}
-                      </motion.span>
-                    ))}
+              {biometricConflicts.length === 0 ? (
+                <TiltCard className="p-6">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-[#34D399]" />
+                    <span className="text-[#C4BDB3]">No biometric conflicts detected.</span>
                   </div>
-                </div>
+                </TiltCard>
+              ) : (
+                biometricConflicts.map((conflict) => {
+                  const Icon = conflictTypeIcon(conflict.conflictType);
+                  return (
+                    <TiltCard key={`${conflict.productId}-${conflict.concern}`} className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div
+                          className={`rounded-lg p-2 ${severityColor(conflict.severity)}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                              {conflict.productName}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${severityColor(conflict.severity)}`}>
+                              {conflict.severity.toUpperCase()}
+                            </span>
+                          </div>
+
+                          <div className="mb-2 flex items-center gap-4 text-xs font-mono-tech text-[#8A8177]">
+                            <span>Concern: {conflict.concern}</span>
+                            <span>Score: {conflict.concernScore}/100</span>
+                            <span>Type: {conflict.conflictType}</span>
+                          </div>
+
+                          <p className="text-sm text-[#C4BDB3]">
+                            {conflict.explanation}
+                          </p>
+
+                          <div className="mt-2 flex items-center gap-4 text-xs">
+                            <span className="flex items-center gap-1 text-[#E5C185]">
+                              <Zap className="h-3 w-3" />
+                              Action: {conflict.recommendation.replace(/_/g, " ")}
+                            </span>
+                            <span className="flex items-center gap-1 text-[#8A8177]">
+                              <Settings className="h-3 w-3" />
+                              Pause: {conflict.daysToPause} days
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => onProductSelect(conflict.productId)}
+                          className="rounded-lg p-1 text-[#8A8177] hover:bg-white/5 hover:text-[#F7F4EF]"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </TiltCard>
+                  );
+                })
               )}
             </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          </AnimatePresence>
+        </motion.div>
 
-      <main className="relative z-10 flex-1 overflow-y-auto">
-        <div className="atelier-container py-8">
-          {/* Header */}
-          <div className="mb-10 animate-slide-up stagger-1">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">Bio-Inventory Intelligence</span>
-                <h1 className="text-h1 font-light mt-1">Shelf Audit Studio</h1>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowINCIDrawer(true)}
-                  className="atelier-btn-secondary"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Paste INCI</span>
-                </button>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="atelier-btn-primary"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add Product</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Scan Summary Bar */}
-            <div className="atelier-glass p-4">
-              <div className="flex flex-wrap items-center gap-4 text-body-sm">
-                <span className="text-[var(--ca-ink-subtle)]">Scan:</span>
-                <span className="font-medium text-[var(--ca-paper)]">Overall {scan.overallScore.toFixed(1)}/100</span>
-                <span className="text-[var(--ca-ink-subtle)]">•</span>
-                <span className="font-medium text-[var(--ca-paper)]">Skin Age {scan.skinAge}</span>
-                <span className="text-[var(--ca-ink-subtle)]">•</span>
-                <span className="font-medium text-[var(--ca-gold-warm)]">{scan.skinType.type}</span>
-                <span className="text-[var(--ca-ink-subtle)]">•</span>
-                <span className="font-medium text-[var(--ca-paper)]">
-                  {engineResult?.scanSummary.priorityConcerns.map((pc: any) => pc.concern).join(", ") || "No priority concerns"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Skin Type Selector */}
-          <div className="mb-10 animate-slide-up stagger-2">
-            <SkinTypeSelector
-              value={skinProfile}
-              onChange={onSkinProfileChange}
-              youcamDetected={scan.skinType?.type ? mapYouCamToSkinType(scan.skinType.type) : undefined}
-            />
-          </div>
-
-          {/* Persona Quick-Select */}
-          <div className="mb-10 animate-slide-up stagger-3">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">Clinical Personas</span>
-                <h2 className="text-h2 font-light mt-1">One-Click Shelf Archetypes</h2>
-              </div>
-              <span className="text-body-sm text-[var(--ca-ink-subtle)]">Click to load archetype</span>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {personas.map((persona, i) => (
-                <motion.button
-                  key={persona.id}
-                  onClick={() => setActivePersona(activePersona === persona.id ? null : persona.id)}
-                  className={`atelier-glass-elevated p-6 relative group ${activePersona === persona.id ? "ring-2" : ""}`}
-                  style={{
-                    borderColor: activePersona === persona.id ? persona.color : "var(--ca-glass-border)",
-                    boxShadow: activePersona === persona.id
-                      ? `0 0 0 1px ${persona.color}, 0 12px 48px ${persona.glow}`
-                      : undefined,
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 + i * 0.1 }}
-                >
+        {/* Chemical Conflicts */}
+        {chemicalConflicts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mb-8"
+          >
+            <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
+              Chemical Compatibility Conflicts
+            </h2>
+            <div className="space-y-4">
+              {chemicalConflicts.map((conflict, i) => (
+                <TiltCard key={`${conflict.productIdA}-${conflict.productIdB}`} className="p-4">
                   <div className="flex items-start gap-4">
-                    <motion.div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: persona.glow }}
-                      initial={{ scale: 0.8, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-                    >
-                      <persona.icon className="h-6 w-6" style={{ color: persona.color }} />
-                    </motion.div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-[var(--ca-paper)]">{persona.title}</h3>
-                      <p className="text-body-sm text-[var(--ca-ink-subtle)] mt-0.5">{persona.subtitle}</p>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {persona.traits.map((trait, ti) => (
-                          <motion.span
-                            key={ti}
-                            className="text-body-xs px-2.5 py-1 rounded-full"
-                            style={{
-                              background: persona.glow,
-                              color: persona.color,
-                              border: `1px solid ${persona.border}`,
-                            }}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.3 + ti * 0.05 }}
-                          >
-                            {trait}
-                          </motion.span>
-                        ))}
+                    <div className="rounded-lg bg-[#E5C185]/10 p-2 text-[#E5C185]">
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {conflict.productNameA}
+                        </span>
+                        <span className="font-mono-tech text-xs text-[#8A8177]">+</span>
+                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {conflict.productNameB}
+                        </span>
+                      </div>
+
+                      <div className="mb-2 text-xs font-mono-tech text-[#8A8177]">
+                        Type: {conflict.conflictType} • Resolution: {resolutionLabel(conflict.resolution)}
+                      </div>
+
+                      <p className="mb-2 text-sm text-[#C4BDB3]">
+                        {conflict.explanation}
+                      </p>
+
+                      {conflict.ingredients.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          {conflict.ingredients.map((ing) => (
+                            <span
+                              key={ing}
+                              className="rounded-full bg-white/5 px-2 py-0.5 font-mono-tech text-[10px] text-[#C4BDB3]"
+                            >
+                              {ing}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <span className="font-mono-tech text-xs text-[#E5C185]">
+                        Affected: {conflict.affectedSlot}
+                      </span>
+                    </div>
+                  </div>
+                </TiltCard>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Redundancy Alerts */}
+        {redundancyAlerts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mb-8"
+          >
+            <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
+              Redundancy Alerts
+            </h2>
+            <div className="space-y-4">
+              {redundancyAlerts.map((alert, i) => (
+                <TiltCard key={alert.role} className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-lg bg-[#34D399]/10 p-2 text-[#34D399]">
+                      <Package className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          Role: {roleLabel(alert.role)}
+                        </span>
+                        <span className="font-mono-tech text-xs text-[#2ECC71]">
+                          Save {currencySymbol}{constraints.currency === "INR" ? alert.redundantValueInr : alert.redundantValueUsd}
+                        </span>
+                      </div>
+
+                      <p className="mb-3 text-sm text-[#C4BDB3]">
+                        {alert.recommendation === "keep_best"
+                          ? "Keep only the most effective product for this role."
+                          : "Consolidate to reduce redundancy."}
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {alert.products.map((product) => {
+                          const isKept = product.id === alert.keptProductId;
+                          const isRemoved = alert.removedProductIds.includes(product.id);
+                          return (
+                            <button
+                              key={product.id}
+                              type="button"
+                              onClick={() => onProductSelect(product.id)}
+                              className={`rounded-lg border px-3 py-2 text-left transition-all ${
+                                isKept
+                                  ? "border-[#34D399]/40 bg-[#34D399]/10"
+                                  : isRemoved
+                                    ? "border-[#F87171]/40 bg-[#F87171]/10"
+                                    : "border-white/12 bg-black/30"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {isKept && <CheckCircle className="h-3 w-3 text-[#34D399]" />}
+                                {isRemoved && <AlertTriangle className="h-3 w-3 text-[#F87171]" />}
+                                <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                                  {product.name}
+                                </span>
+                              </div>
+                              <span className="font-mono-tech text-[10px] text-[#8A8177]">
+                                {priceDisplay(product, constraints.currency)} · {roleLabel(product.roles[0])}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
-
-                  <AnimatePresence>
-                    {activePersona === persona.id && (
-                      <motion.div
-                        className="mt-4 pt-4 border-t"
-                        style={{ borderColor: persona.border }}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <p className="text-body-sm text-[var(--ca-ink-subtle)] mb-3">Conflicts detected:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {persona.conflicts.map((conflict, ci) => (
-                            <motion.span
-                              key={ci}
-                              className="text-body-xs px-2.5 py-1 rounded-full"
-                              style={{
-                                background: persona.glow,
-                                color: persona.color,
-                                border: `1px solid ${persona.border}`,
-                              }}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.1 + ci * 0.05 }}
-                            >
-                              {conflict}
-                            </motion.span>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
+                </TiltCard>
               ))}
             </div>
-          </div>
+          </motion.div>
+        )}
 
-          {/* Shelf Controls */}
-          <div className="mb-8 animate-slide-up stagger-4">
-            <ShelfControls
-              shelf={shelf}
-              constraints={constraints}
-              setConstraints={setConstraints}
-              onClearShelf={handleClearShelf}
-            />
-          </div>
+        {/* Gap Recommendations */}
+        {gapRecommendations.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="mb-8"
+          >
+            <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
+              Gap Recommendations
+            </h2>
+            <div className="space-y-4">
+              {gapRecommendations.map((gap, i) => (
+                <TiltCard key={gap.concern} className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-lg bg-[#E5C185]/10 p-2 text-[#E5C185]">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {gap.concern.charAt(0).toUpperCase() + gap.concern.slice(1)}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            gap.concernScore >= 85
+                              ? "text-[#F87171] bg-[#F87171]/15"
+                              : gap.concernScore >= 60
+                                ? "text-[#E5C185] bg-[#E5C185]/10"
+                                : "text-[#34D399] bg-[#34D399]/10"
+                          }`}
+                        >
+                          Score: {gap.concernScore}
+                        </span>
+                      </div>
 
-          {/* Current Shelf - 3D Tilt Cards */}
-          <div className="mb-10 animate-slide-up stagger-5">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-subheading">Current Shelf</span>
-                <h2 className="text-h2 font-light mt-1">{shelf.length} Products Loaded</h2>
-              </div>
-              {shelf.length > 0 && (
-                <button
-                  onClick={handleClearShelf}
-                  className="atelier-btn-ghost text-[var(--ca-crimson)] hover:bg-[var(--ca-crimson-glow)]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Clear Shelf
-                </button>
-              )}
+                      <p className="mb-3 text-sm text-[#C4BDB3]">
+                        {gap.rationale}
+                      </p>
+
+                      {gap.recommendedProduct && (
+                        <div className="mb-3 rounded-xl border border-white/12 bg-black/30 p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-serif-editorial text-sm text-[#F7F4EF]">
+                                {gap.recommendedProduct.name}
+                              </div>
+                              <div className="font-mono-tech text-[10px] text-[#8A8177]">
+                                {gap.recommendedProduct.brand} · {gap.recommendedProduct.description.slice(0, 80)}...
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-serif-editorial text-sm text-[#E5C185]">
+                                {priceDisplay(gap.recommendedProduct, constraints.currency)}
+                              </div>
+                              <div className="font-mono-tech text-[10px] text-[#8A8177]">
+                                Cost/day: {currencySymbol}{(constraints.currency === "INR" ? gap.costPerDayInr : gap.costPerDayUsd).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {gap.exclusionRationales.length > 0 && (
+                        <div className="space-y-1.5">
+                          {gap.exclusionRationales.map((ex, j) => (
+                            <div key={j} className="flex items-start gap-2 text-xs">
+                              <span className="font-mono-tech text-[#8A8177] mt-0.5">•</span>
+                              <span className="font-mono-tech text-[#C4BDB3]">
+                                {ex.productName}: {ex.reason}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TiltCard>
+              ))}
             </div>
+          </motion.div>
+        )}
 
-            {shelf.length === 0 ? (
-              <div className="atelier-glass p-12 text-center">
-                <Package className="mx-auto mb-4 h-16 w-16 text-[var(--ca-ink-faint)]" />
-                <p className="text-[var(--ca-ink-muted)]">Your shelf is empty. Add products from the catalog below or load a persona.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {shelf.map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    className="atelier-tilt-card"
-                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: 0.1 + index * 0.05, type: "spring", stiffness: 300, damping: 25 }}
+        {/* Final Routine */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mb-8"
+        >
+          <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
+            Optimized Routine
+          </h2>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {(["AM", "PM"] as const).map((period) => (
+              <TiltCard key={period} className="p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <div
+                    className={`rounded-lg p-1.5 ${
+                      period === "AM"
+                        ? "bg-[#E5C185]/10 text-[#E5C185]"
+                        : "bg-[#34D399]/10 text-[#34D399]"
+                    }`}
                   >
-                    <div className="atelier-tilt-inner atelier-glass p-4 h-full">
-                      <ProductCard
-                        product={product}
-                        onRemove={handleRemoveProduct}
-                        onSelect={() => onProductSelect(product.id)}
-                        showRemove={true}
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </div>
+                    {period === "AM" ? <Sun className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
+                  </div>
+                  <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                    {period} Routine
+                  </h3>
+                </div>
 
-          {/* Catalog - Add Products Modal */}
-          <AnimatePresence>
-            {showAddModal && (
-              <>
-                <motion.div
-                  className="atelier-diagnostic-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setShowAddModal(false)}
-                />
-                <motion.div
-                  className="atelier-diagnostic-panel atelier-glass-elevated p-6 max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col"
-                  initial={{ opacity: 0, y: 40, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 40, scale: 0.95 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 className="text-h3 font-light">Apothecary Catalog</h2>
-                      <p className="text-body-sm text-[var(--ca-ink-subtle)]">{filteredCatalog.length} products available</p>
+                <div className="space-y-2">
+                  {finalRoutine[period].map((step) => (
+                    <div
+                      key={`${step.productId}-${step.step}`}
+                      className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/30 p-3"
+                    >
+                      <span className="font-mono-tech text-xs text-[#8A8177]">
+                        {step.step}.
+                      </span>
+                      <div className="flex-1">
+                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {step.productName}
+                        </span>
+                        <span className="font-mono-tech text-[10px] text-[#8A8177]">
+                          {" · " + roleLabel(step.role)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onProductSelect(step.productId)}
+                        className="rounded p-1 text-[#8A8177] hover:text-[#F7F4EF]"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </button>
                     </div>
-                    <button onClick={() => setShowAddModal(false)} className="atelier-btn-ghost p-2">
-                      <X className="h-5 w-5" />
+                  ))}
+                </div>
+              </TiltCard>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Shelf Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="mb-8"
+        >
+          <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
+            Your Shelf
+          </h2>
+          <div className="space-y-3">
+            {shelf.map((product) => {
+              const inRoutine =
+                finalRoutine.AM.some((s) => s.productId === product.id) ||
+                finalRoutine.PM.some((s) => s.productId === product.id);
+              const hasConflict = biometricConflicts.some((c) => c.productId === product.id);
+              const isRedundant = redundancyAlerts.some((a) =>
+                a.removedProductIds.includes(product.id)
+              );
+
+              return (
+                <TiltCard key={product.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                          inRoutine
+                            ? "bg-[#34D399]/10 text-[#34D399]"
+                            : "bg-white/5 text-[#8A8177]"
+                        }`}
+                      >
+                        <Package className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {product.name}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono-tech text-[10px] text-[#8A8177]">
+                            {product.brand} · {priceDisplay(product, constraints.currency)}
+                          </span>
+                          {hasConflict && (
+                            <span className="rounded-full bg-[#F87171]/15 px-1.5 py-0.5 font-mono-tech text-[10px] text-[#F87171]">
+                              Conflict
+                            </span>
+                          )}
+                          {isRedundant && !hasConflict && (
+                            <span className="rounded-full bg-[#E5C185]/15 px-1.5 py-0.5 font-mono-tech text-[10px] text-[#E5C185]">
+                              Redundant
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onProductSelect(product.id)}
+                      className="rounded p-1.5 text-[#8A8177] hover:bg-white/5 hover:text-[#F7F4EF]"
+                    >
+                      <ExternalLink className="h-4 w-4" />
                     </button>
                   </div>
+                </TiltCard>
+              );
+            })}
+          </div>
+        </motion.div>
 
-                  {/* Search & Filter */}
-                  <div className="mb-6 flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ca-ink-faint)]" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search products, brands, actives…"
-                        className="atelier-input pl-10"
-                      />
-                    </div>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="atelier-input w-full sm:w-48"
-                    >
-                      <option value="all">All Categories</option>
-                      {categories.filter(c => c !== "all").map(cat => (
-                        <option key={cat} value={cat}>
-                          {cat.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Product Grid */}
-                  <div className="flex-1 overflow-y-auto grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pr-2">
-                    {filteredCatalog.map((product, index) => (
-                      <motion.div
-                        key={product.id}
-                        className="atelier-tilt-card cursor-pointer"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.02 }}
-                        onClick={() => handleAddProduct(product)}
-                      >
-                        <div className="atelier-tilt-inner atelier-glass p-4 h-full">
-                          <ProductCard
-                            product={product as ShelfProduct}
-                            onAdd={() => handleAddProduct(product)}
-                            onSelect={() => onProductSelect(product.id)}
-                            showAdd={true}
-                          />
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {filteredCatalog.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center text-[var(--ca-ink-faint)]">
-                      No products match your search.
-                    </div>
-                  )}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* Engine Results Summary */}
-          {engineResult && (
-            <div className="mb-10 animate-slide-up stagger-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <span className="text-subheading">Audit Intelligence</span>
-                  <h2 className="text-h2 font-light mt-1">Conflict & Gap Analysis</h2>
-                </div>
+        {/* Verdict Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.9 }}
+        >
+          <TiltCard stone className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="rounded-lg bg-[#161310] p-2 text-[#E5C185]">
+                <Banknote className="h-5 w-5" />
               </div>
-
-              <ConflictList
-                biometricConflicts={engineResult.biometricConflicts}
-                chemicalConflicts={engineResult.chemicalConflicts}
-                redundancyAlerts={engineResult.redundancyAlerts}
-              />
-
-              {/* Metric Cards */}
-              <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <MetricCard
-                  title="Biometric Conflicts"
-                  value={String(engineResult.biometricConflicts?.length || 0)}
-                  subtitle="scan-to-shelf"
-                  color={engineResult.biometricConflicts?.length > 0 ? "var(--ca-crimson)" : "var(--ca-success)"}
-                  icon={AlertTriangle}
-                />
-                <MetricCard
-                  title="Chemical Conflicts"
-                  value={String(engineResult.chemicalConflicts?.length || 0)}
-                  subtitle="shelf-to-shelf"
-                  color={engineResult.chemicalConflicts?.length > 0 ? "var(--ca-warning)" : "var(--ca-success)"}
-                  icon={FlaskConical}
-                />
-                <MetricCard
-                  title="Redundancies"
-                  value={String(engineResult.redundancyAlerts?.length || 0)}
-                  subtitle="duplicate roles"
-                  color={engineResult.redundancyAlerts?.length > 0 ? "var(--ca-gold-warm)" : "var(--ca-success)"}
-                  icon={Sparkles}
-                />
-                <MetricCard
-                  title="Gaps Identified"
-                  value={String(engineResult.gapRecommendations?.length || 0)}
-                  subtitle="priority concerns"
-                  color={engineResult.gapRecommendations?.length > 0 ? "var(--ca-gold-warm)" : "var(--ca-success)"}
-                  icon={TestTube2}
-                />
+              <div className="flex-1">
+                <h3 className="font-serif-editorial mb-1 text-xl text-[#F7F4EF]">
+                  {verdict.message}
+                </h3>
+                <p className="text-sm text-[#C4BDB3]">
+                  {verdict.totalCostInr > 0
+                    ? `Buy ${currencySymbol}${constraints.currency === "INR" ? verdict.totalCostInr : verdict.totalCostUsd} worth of products.`
+                    : "No new purchases needed — your existing routine covers everything."}
+                  {totalSaved > 0 && ` Potential savings: ${currencySymbol}${totalSaved.toFixed(0)}.`}
+                </p>
               </div>
-
-              {/* AM/PM Routine */}
-              {engineResult.finalRoutine && (
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
-                  <RoutineColumn
-                    title="AM Routine"
-                    items={engineResult.finalRoutine.AM}
-                    icon={Sparkles}
-                    accent="var(--ca-gold-warm)"
-                  />
-                  <RoutineColumn
-                    title="PM Routine"
-                    items={engineResult.finalRoutine.PM}
-                    icon={TestTube2}
-                    accent="var(--ca-skin-neutral)"
-                  />
-                </div>
-              )}
-
-              {/* CTA to Verdict */}
-              <div className="mt-10 flex justify-center">
-                <button
-                  onClick={onVerdict}
-                  className="atelier-btn-primary w-full max-w-md"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                  View Formulation Ledger
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onVerdict}
+                className="rounded-full border border-[#E5C185]/30 bg-[#E5C185]/10 px-4 py-2 font-mono-tech text-xs text-[#E5C185] hover:bg-[#E5C185]/20"
+              >
+                View Verdict
+              </button>
             </div>
-          )}
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function MetricCard({
-  title,
-  value,
-  subtitle,
-  color,
-  icon: Icon,
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-  color: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <div className="atelier-glass p-6">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-body-sm text-[var(--ca-ink-subtle)]">{title}</p>
-          <p className="text-body-xs text-[var(--ca-ink-faint)]">{subtitle}</p>
-        </div>
-      </div>
-      <div className="text-h1 font-bold text-[var(--ca-paper)]" style={{ fontFamily: "var(--font-fira-code)" }}>
-        {value}
+          </TiltCard>
+        </motion.div>
       </div>
     </div>
   );
 }
 
-function RoutineColumn({ title, items, icon: Icon, accent }: { title: string; items: any[]; icon: React.ComponentType<{ className?: string }>; accent: string }) {
-  if (!items?.length) return null;
-
-  return (
-    <div className="atelier-glass-elevated p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}20` }}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <h3 className="text-h3 font-light">{title}</h3>
-      </div>
-      <ol className="space-y-3">
-        {items.map((item) => (
-          <li key={item.productId} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--ca-glass-border)" }}>
-            <span
-              className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-mono"
-              style={{ background: accent, color: "var(--ca-ink)" }}
-            >
-              {item.step}
-            </span>
-            <span className="text-body text-[var(--ca-paper)]">{item.productName}</span>
-            <span className="ml-auto text-body-xs text-[var(--ca-ink-faint)] uppercase tracking-wider">{item.role.replace(/_/g, " ")}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
+export default ShelfAuditView;

@@ -1,304 +1,302 @@
 "use client";
 
-import { useRef, useState, useEffect, MouseEvent } from "react";
-import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
-import { Layers, MousePointer2, RotateCcw, Eye, Grid, Zap } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { ChevronLeft, ChevronRight, Info, ThermometerSun } from "lucide-react";
+import { YouCamConcern } from "@/types/youcam";
 
-interface DermalLayer3DProps {
-  scanData: {
-    concerns: Array<{
-      type: string;
-      uiScore: number;
-      maskUrls: string[];
-    }>;
-    overallScore: number;
-  };
-  selfieUrl?: string;
+export interface DermalLayer {
+  id: string;
+  name: string;
+  description: string;
+  depthIndex: number;
+  concerns: string[];
+  color: string;
+  opacity: number;
+  icon: React.ReactNode;
 }
 
-const layerData = [
-  { id: "stratum", name: "Stratum Corneum", depth: 0, color: "rgba(246,244,240,0.9)", icon: Grid },
-  { id: "epidermis", name: "Epidermis", depth: 1, color: "rgba(15,83,56,0.12)", icon: Zap },
-  { id: "dermis", name: "Dermis", depth: 2, color: "rgba(153,27,27,0.08)", icon: Layers },
-  { id: "hypodermis", name: "Hypodermis", depth: 3, color: "rgba(180,83,9,0.06)", icon: Grid },
+export interface DermalLayer3DProps {
+  concerns: YouCamConcern[];
+  concernScores: Record<string, number>;
+  className?: string;
+}
+
+const LAYERS: DermalLayer[] = [
+  {
+    id: "stratum-corneum",
+    name: "Stratum Corneum",
+    description:
+      "The outermost layer — 15–20 dead corneocytes. Your barrier's first line of defense. Compromises here show as redness, moisture loss, and sensitivity.",
+    depthIndex: 0,
+    concerns: ["moisture", "redness", "texture", "oiliness"],
+    color: "#e74c3c",
+    opacity: 0.35,
+    icon: <ThermometerSun className="h-4 w-4" />,
+  },
+  {
+    id: "viable-epidermis",
+    name: "Viable Epidermis",
+    description:
+      "Living keratinocytes undergoing differentiation. Melanin, collagen I production, and cellular turnover happen here. Wrinkles, pigmentation, and texture originate at this level.",
+    depthIndex: 1,
+    concerns: ["wrinkle", "age_spot", "dark_circle", "firmness", "texture", "acne"],
+    color: "#f39c12",
+    opacity: 0.3,
+    icon: <ThermometerSun className="h-4 w-4" />,
+  },
+  {
+    id: "papillary-dermis",
+    name: "Papillary Dermis",
+    description:
+      "Loose connective tissue with fine collagen (Type III) and elastin fibers. Supports superficial vasculature. Dark circles and early periorbital changes originate here.",
+    depthIndex: 2,
+    concerns: ["dark_circle", "eye_bag", "tear_trough", "wrinkle"],
+    color: "#3498db",
+    opacity: 0.25,
+    icon: <ThermometerSun className="h-4 w-4" />,
+  },
+  {
+    id: "reticular-dermis",
+    name: "Reticular Dermis",
+    description:
+      "Dense connective tissue with thick collagen (Type I) and elastin. Structural integrity of the skin. Aging, sagging, and deep wrinkles show up here.",
+    depthIndex: 3,
+    concerns: ["wrinkle", "firmness", "droopy_upper_eyelid", "droopy_lower_eyelid"],
+    color: "#9b59b6",
+    opacity: 0.2,
+    icon: <ThermometerSun className="h-4 w-4" />,
+  },
+  {
+    id: "hypodermis",
+    name: "Hypodermis (Subcutis)",
+    description:
+      "Fat and loose connective tissue. Provides cushioning and structural support. Volume loss and contour changes appear here.",
+    depthIndex: 4,
+    concerns: ["droopy_upper_eyelid", "droopy_lower_eyelid", "tear_trough", "eye_bag"],
+    color: "#2ecc71",
+    opacity: 0.15,
+    icon: <ThermometerSun className="h-4 w-4" />,
+  },
 ];
 
-export function DermalLayer3D({ scanData, selfieUrl }: DermalLayer3DProps) {
-  const [mode, setMode] = useState<"2d" | "3d">("2d");
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState({ x: 48, y: -22 });
+export function DermalLayer3D({
+  concerns,
+  concernScores,
+  className = "",
+}: DermalLayer3DProps) {
+  const [activeLayer, setActiveLayer] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const rx = useMotionValue(rotation.x);
-  const ry = useMotionValue(rotation.y);
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
 
-  const springRx = useSpring(rx, { stiffness: 200, damping: 25 });
-  const springRy = useSpring(ry, { stiffness: 200, damping: 25 });
+  const rotateX = useSpring(useTransform(mouseY, [0, 1], [8, -8]), {
+    stiffness: 260,
+    damping: 25,
+  });
+  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-8, 8]), {
+    stiffness: 260,
+    damping: 25,
+  });
 
-  const rotationX = useSpring(rx, { stiffness: 200, damping: 25 });
-  const rotationY = useSpring(ry, { stiffness: 200, damping: 25 });
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (mode !== "3d") return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    mouseX.set((e.clientX - rect.left) / rect.width);
+    mouseY.set((e.clientY - rect.top) / rect.height);
   };
 
-  const handleMouseMove = (e: globalThis.MouseEvent) => {
-    if (!isDragging || mode !== "3d") return;
-    const deltaX = (e.clientX - dragStart.x) * 0.3;
-    const deltaY = (e.clientY - dragStart.y) * 0.3;
-    rx.set(rotation.x + deltaY);
-    ry.set(rotation.y - deltaX);
+  const handlePrev = () => {
+    setActiveLayer((prev) => (prev - 1 + LAYERS.length) % LAYERS.length);
   };
 
-  const handleMouseUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    setRotation({ x: rx.get(), y: ry.get() });
+  const handleNext = () => {
+    setActiveLayer((prev) => (prev + 1) % LAYERS.length);
   };
 
-  // Memoize event handlers to avoid exhausting deps
-  const handleMouseMoveRef = useRef(handleMouseMove);
-  handleMouseMoveRef.current = handleMouseMove;
-  const handleMouseUpRef = useRef(handleMouseUp);
-  handleMouseUpRef.current = handleMouseUp;
+  const layer = LAYERS[activeLayer];
 
-  useEffect(() => {
-    const move = (e: globalThis.MouseEvent) => handleMouseMoveRef.current(e);
-    const up = () => handleMouseUpRef.current();
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
-    return () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-  }, [isDragging, mode]);
-
-  const maskLayers = scanData.concerns
-    .filter(c => c.maskUrls.length > 0 && c.type !== "skin_type")
-    .slice(0, 8)
-    .map((concern, i) => ({
-      id: concern.type,
-      name: concern.type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-      score: concern.uiScore,
-      maskUrl: concern.maskUrls[0],
-      index: i,
-    }));
-
-  if (mode === "2d") {
-    return (
-      <div className="relative" ref={containerRef}>
-        <div className="glass-card p-6 animate-slide-up stagger-1">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-h3">16-Concern Mask Precision View</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-body-sm">2D View Active</span>
-              <button
-                onClick={() => setMode("3d")}
-                className="btn-ghost gap-2 px-4"
-              >
-                <Layers className="h-4 w-4" />
-                3D Exploded
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {maskLayers.map((layer) => (
-              <div key={layer.id} className="relative group stone-card p-4 rounded-xl overflow-hidden">
-                <div className="aspect-square relative overflow-hidden rounded-lg bg-[var(--ca-alabaster)]">
-                  <img
-                    src={layer.maskUrl}
-                    alt={`${layer.name} mask`}
-                    className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-80"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-body-sm font-medium">{layer.name}</span>
-                  <span className="text-mono font-semibold text-[var(--ca-emerald)]">
-                    {layer.score}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const layerConcerns = layer.concerns
+    .map((concernId) => {
+      const score = concernScores[concernId] ?? 0;
+      if (score === 0) return null;
+      const concern = concerns.find((c) => c.type.includes(concernId));
+      return { id: concernId, score, uiScore: concern?.uiScore ?? score };
+    })
+    .filter(Boolean) as Array<{ id: string; score: number; uiScore: number }>;
 
   return (
     <div
+      className={`relative rounded-2xl border border-white/12 bg-white/[0.035] p-6 ${className}`}
       ref={containerRef}
-      className="relative"
-      onMouseDown={handleMouseDown}
-      style={{ touchAction: "none" }}
+      onMouseMove={handleMouseMove}
     >
-      <div className="glass-card p-6 animate-slide-up stagger-1">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-h3">3D Exploded Dermal Stack</h3>
-          <div className="flex items-center gap-3">
-            <span className="badge-emerald">3D Active</span>
-            <button
-              onClick={() => setMode("2d")}
-              className="btn-ghost gap-2 px-4"
-            >
-              <Eye className="h-4 w-4" />
-              2D Precision
-            </button>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-[#E5C185]">
+              3D Dermal Layer Map
+            </span>
+            <Info className="h-3.5 w-3.5 text-[#8A8177]" />
+          </div>
+          <h3 className="mt-1 font-serif-editorial text-2xl font-normal text-[#F7F4EF]">
+            {layer.name}
+          </h3>
+          <p className="mt-1 max-w-lg text-xs text-[#C4BDB3]/80">
+            {layer.description}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 rounded-full border border-white/12 bg-black/35 p-1">
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="rounded-full p-1.5 text-[#C4BDB3] hover:bg-white/10 hover:text-[#F7F4EF]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="px-2 font-mono-tech text-[11px] text-[#8A8177]">
+            {activeLayer + 1}/{LAYERS.length}
+          </span>
+          <button
+            type="button"
+            onClick={handleNext}
+            className="rounded-full p-1.5 text-[#C4BDB3] hover:bg-white/10 hover:text-[#F7F4EF]"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="relative h-80 w-full">
+        <motion.div
+          style={{
+            rotateX,
+            rotateY,
+            transformStyle: "preserve-3d",
+          }}
+          className="relative h-full w-full"
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative h-52 w-40">
+              {LAYERS.map((l, index) => {
+                const depthOffset = (index - activeLayer) * 4;
+                const isActive = index === activeLayer;
+                const zIndex = isActive ? 30 : 20 - Math.abs(activeLayer - index);
+
+                return (
+                  <motion.div
+                    key={l.id}
+                    className="absolute inset-0 rounded-xl border"
+                    style={{
+                      backgroundColor: `${l.color}10`,
+                      borderColor: isActive ? l.color : `${l.color}30`,
+                      transform: `translateZ(${depthOffset}px) scale(${
+                        isActive ? 1 : 1 - Math.abs(index - activeLayer) * 0.04
+                      })`,
+                      opacity: isActive ? 1 : 0.4,
+                      zIndex,
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0 rounded-xl"
+                      style={{
+                        background: `radial-gradient(ellipse at 50% 50%, ${l.color}20 0%, transparent 70%)`,
+                        opacity: isActive ? l.opacity + 0.1 : 0,
+                      }}
+                    />
+                    <div
+                      className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-2 py-1"
+                    >
+                      <span
+                        className="flex h-2 w-2 items-center justify-center rounded-full"
+                        style={{ backgroundColor: l.color }}
+                      />
+                      <span
+                        className={`font-mono-tech text-xs font-medium`}
+                        style={{ color: l.color, opacity: isActive ? 1 : 0.4 }}
+                      >
+                        {l.name}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex items-center justify-between rounded-xl border border-white/12 bg-black/30 p-3">
+          <span className="font-mono-tech text-xs text-[#C4BDB3]">
+            Concern Depth Mapping
+          </span>
+          <div className="flex items-center gap-1.5">
+            {layer.concerns.slice(0, 3).map((concernId) => {
+              const scores = concernScores[concernId] ?? 0;
+              const concern = concerns.find((c) =>
+                c.type.includes(concernId)
+              );
+              const uiScore = concern?.uiScore ?? scores;
+              return (
+                <div
+                  key={concernId}
+                  className="flex items-center gap-0.5 rounded-full bg-white/5 px-1.5 py-0.5"
+                >
+                  <span
+                    className={`font-mono-tech text-[10px] font-medium`}
+                    style={{
+                      color:
+                        uiScore >= 85
+                          ? "#34D399"
+                          : uiScore >= 60
+                            ? "#E5C185"
+                            : "#F87171",
+                    }}
+                  >
+                    {concernId}: {uiScore}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        <div
-          className="relative"
-          style={{
-            perspective: "1200px",
-            transformStyle: "preserve-3d",
-            minHeight: "500px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <motion.div
-            className="relative"
-            style={{
-              transformStyle: "preserve-3d",
-              rotateX: rotationX,
-              rotateY: rotationY,
-            }}
-          >
-            {/* Base selfie layer */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                transform: "translateZ(0px)",
-                borderRadius: "16px",
-                overflow: "hidden",
-                boxShadow: "0 20px 60px rgba(20,22,21,0.15)",
-              }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1, duration: 400 }}
-            >
-              {selfieUrl ? (
-                <img src={selfieUrl} alt="Skin analysis base" className="w-full h-[400px] object-cover" />
-              ) : (
-                <div className="w-full h-[400px] bg-gradient-to-br from-[var(--ca-stone)] to-[var(--ca-alabaster)] flex items-center justify-center">
-                  <span className="text-body-sm text-[var(--ca-slate-light)]">Selfie Base Layer</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-            </motion.div>
-
-            {/* Mask detection layer */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                transform: "translateZ(60px)",
-                borderRadius: "16px",
-                overflow: "hidden",
-                boxShadow: "0 30px 80px rgba(20,22,21,0.2)",
-              }}
-              initial={{ opacity: 0, translateZ: -20 }}
-              animate={{ opacity: 0.9, translateZ: 0 }}
-              transition={{ delay: 0.2, duration: 500 }}
-            >
-              <div className="w-full h-[400px] relative">
-                {maskLayers.map((layer, i) => (
-                  <motion.img
-                    key={layer.id}
-                    src={layer.maskUrl}
-                    alt={`${layer.name} mask`}
-                    className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-70"
-                    style={{ filter: "contrast(1.2) brightness(1.1)" }}
-                    initial={{ opacity: 0, scale: 1.1 }}
-                    animate={{ opacity: 0.85, scale: 1 }}
-                    transition={{ delay: 0.3 + i * 0.05, duration: 400 }}
-                  />
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Biometric coordinate grid layer */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                transform: "translateZ(120px)",
-                borderRadius: "16px",
-                boxShadow: "0 40px 100px rgba(20,22,21,0.25)",
-              }}
-              initial={{ opacity: 0, translateZ: -40 }}
-              animate={{ opacity: 0.15, translateZ: 0 }}
-              transition={{ delay: 0.4, duration: 500 }}
-            >
-              <div className="w-full h-[400px] relative">
-                <svg className="w-full h-full" viewBox="0 0 400 400" preserveAspectRatio="none">
-                  <defs>
-                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" style={{ stroke: "var(--ca-emerald)" }} />
-                </svg>
-                <div className="absolute bottom-4 left-4 right-4 flex justify-between text-xs text-[var(--ca-emerald)] font-mono opacity-60">
-                  <span>Biometric Coordinate Grid</span>
-                  <span>YouCam V2.1 SD</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Layer labels floating */}
-            {layerData.map((layer, i) => (
-              <motion.div
-                key={layer.id}
-                className="absolute pointer-events-none"
+        <div className="rounded-xl border border-white/12 bg-black/30 p-3">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="font-mono-tech text-xs text-[#C4BDB3]">
+              Active Concerns in Layer
+            </span>
+            <span className="font-mono-tech text-xs text-[#8A8177]">
+              ({layerConcerns.length})
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {layerConcerns.map(({ id, uiScore }) => (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 rounded-full border border-white/8 px-2 py-0.5 font-mono-tech text-[10px]"
                 style={{
-                  top: `${20 + i * 8}%`,
-                  right: "24px",
-                  transform: `translateZ(${i * 60 + 20}px)`,
+                  backgroundColor: `${layer.color}20`,
+                  color: layer.color,
                 }}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 0.8, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.08, duration: 400 }}
               >
-                <span className="badge-stone whitespace-nowrap text-xs">
-                  {layer.name}
+                {id}
+                <span className="font-medium">
+                  ({uiScore})
                 </span>
-              </motion.div>
+              </span>
             ))}
-          </motion.div>
-
-          {/* Depth indicator */}
-          <motion.div
-            className="absolute bottom-6 left-6 right-6 flex items-center justify-between"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 400 }}
-          >
-            <div className="flex items-center gap-2 text-body-sm text-[var(--ca-slate-light)]">
-              <MousePointer2 className="h-4 w-4" />
-              Drag to rotate
-            </div>
-            <div className="flex items-center gap-4">
-              {layerData.map((layer, i) => (
-                <div key={layer.id} className="flex items-center gap-2">
-                  <motion.div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: layer.color }}
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 2000, delay: i * 200, repeat: Infinity }}
-                  />
-                  <span className="text-body-sm text-[var(--ca-slate)] hidden sm:inline">{layer.name}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+            {layerConcerns.length === 0 && (
+              <span className="text-xs text-[#8A8177]">No active concerns at this layer</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+export default DermalLayer3D;

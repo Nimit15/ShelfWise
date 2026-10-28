@@ -1,9 +1,15 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import React, { useRef, useState } from "react";
+import {
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 
-interface TiltCardProps {
+export interface TiltCardProps {
   children: React.ReactNode;
   className?: string;
   maxTilt?: number;
@@ -21,7 +27,7 @@ export function TiltCard({
   className = "",
   maxTilt = 6,
   perspective = 1200,
-  scale = 1.02,
+  scale = 1.015,
   glass = true,
   stone = false,
   onClick,
@@ -29,87 +35,76 @@ export function TiltCard({
   onMouseLeave,
 }: TiltCardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+  const spotX = useMotionValue(0);
+  const spotY = useMotionValue(0);
 
-  const springX = useSpring(x, { stiffness: 300, damping: 30 });
-  const springY = useSpring(y, { stiffness: 300, damping: 30 });
+  const springConfig = { stiffness: 280, damping: 28, mass: 0.6 };
+  const rotateX = useSpring(useTransform(mouseY, [0, 1], [maxTilt, -maxTilt]), springConfig);
+  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-maxTilt, maxTilt]), springConfig);
 
-  const rotateX = useTransform(springY, [-1, 1], [maxTilt, -maxTilt]);
-  const rotateY = useTransform(springX, [-1, 1], [-maxTilt, maxTilt]);
+  const spotlightBackground = useMotionTemplate`radial-gradient(360px circle at ${spotX}px ${spotY}px, rgba(229, 193, 133, 0.14), transparent 70%)`;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const deltaX = (e.clientX - centerX) / (rect.width / 2);
-    const deltaY = (e.clientY - centerY) / (rect.height / 2);
-    x.set(Math.max(-1, Math.min(1, deltaX)));
-    y.set(Math.max(-1, Math.min(1, deltaY)));
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    mouseX.set(x);
+    mouseY.set(y);
+    spotX.set(e.clientX - rect.left);
+    spotY.set(e.clientY - rect.top);
   };
 
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
+  const handleEnter = () => {
+    setHovered(true);
+    onMouseEnter?.();
   };
 
-  const baseClass = `
-    relative overflow-hidden transition-all duration-200
-    ${glass ? "glass-card" : ""}
-    ${stone ? "stone-card" : ""}
-    ${!glass && !stone ? "bg-white border border-[var(--ca-border)] rounded-2xl" : ""}
-  `;
+  const handleLeave = () => {
+    setHovered(false);
+    mouseX.set(0.5);
+    mouseY.set(0.5);
+    onMouseLeave?.();
+  };
+
+  const baseSurface = stone
+    ? "bg-[#221D18]/90 border border-white/12"
+    : glass
+      ? "bg-white/[0.045] backdrop-blur-2xl border border-white/12"
+      : "";
 
   return (
-    <div
+    <motion.div
       ref={ref}
-      className={`${baseClass} ${className}`}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => {
-        setIsHovered(true);
-        onMouseEnter?.();
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        handleMouseLeave();
-        onMouseLeave?.();
-      }}
       onClick={onClick}
-      style={{ cursor: onClick ? "pointer" : "default" }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      style={{
+        perspective,
+        rotateX: hovered ? rotateX : 0,
+        rotateY: hovered ? rotateY : 0,
+        transformStyle: "preserve-3d",
+      }}
+      whileHover={{ scale }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className={`relative overflow-hidden rounded-2xl transition-colors duration-300 ${baseSurface} ${
+        onClick ? "cursor-pointer" : ""
+      } ${className}`}
     >
-      <motion.div
-        style={{
-          transformPerspective: perspective,
-          transformStyle: "preserve-3d",
-          rotateX,
-          rotateY,
-          scale: isHovered ? scale : 1,
-          willChange: "transform",
-        }}
-        className="relative z-10"
-      >
-        {children}
-      </motion.div>
-
-      {/* Specular highlight */}
-      <motion.div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(
-              ellipse at ${useTransform(springX, [-1, 1], ["20%", "80%"])} ${useTransform(springY, [-1, 1], ["20%", "80%"])},
-              rgba(255,255,255,0.15) 0%,
-              transparent 60%
-            )
-          `,
-          opacity: isHovered ? 1 : 0,
-          transition: "opacity 300ms ease",
-          borderRadius: "inherit",
-        }}
-      />
-    </div>
+      {hovered && (
+        <motion.div
+          className="pointer-events-none absolute -inset-px z-0 transition-opacity duration-300"
+          style={{ background: spotlightBackground }}
+        />
+      )}
+      <div className="relative z-10 h-full">{children}</div>
+    </motion.div>
   );
 }
+
+export default TiltCard;

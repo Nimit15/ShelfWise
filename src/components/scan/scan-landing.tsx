@@ -1,368 +1,551 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
-import { Upload, Image, ChevronRight, ChevronLeft, Search, Eye, Layers, Sparkles, Flame, Droplet, Shield, Sparkles as SparklesIcon, Settings, Menu, X, ChevronDown } from "lucide-react";
-import { mockScan } from "@/lib/mock-scan";
+import React, { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Camera,
+  Upload,
+  ImageIcon,
+  Sparkles,
+  Shield,
+  BarChart3,
+  Scan,
+  FileText,
+  Droplet,
+  Eye,
+  Palette,
+} from "lucide-react";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { SkinTypeSelector, SkinProfile } from "@/components/shelf/SkinTypeSelector";
+import { mockScan, CONCERN_LABELS, CONCERN_COLORS } from "@/lib/mock-scan";
 import { ParsedScan } from "@/lib/mock-scan";
-import { SkinTypeSelector, SkinType, Sensitivity } from "@/components/shelf/SkinTypeSelector";
+import { SkinType } from "@/components/shelf/SkinTypeSelector";
 
-interface ScanLandingProps {
+export interface ScanLandingProps {
   onStart: () => void;
   scanData: ParsedScan;
   setScanData: (data: ParsedScan) => void;
+  selectedImage: string | null;
+  setSelectedImage: (img: string | null) => void;
 }
 
-const skinTypeLabels: Record<SkinType, string> = {
-  oily: "Oily",
-  dry: "Dry",
-  combination: "Combination",
-  normal: "Normal",
-};
-
-const reticleZones = [
-  { id: "cheek", label: "Cheek · Redness", score: 58, x: 32, y: 45, concern: "redness" },
-  { id: "tzone", label: "T-Zone · Pores", score: 62, x: 50, y: 32, concern: "pore" },
-  { id: "periorbital", label: "Periorbital · Dark Circles", score: 71, x: 50, y: 22, concern: "dark_circle_v2" },
-  { id: "barrier", label: "Barrier · Moisture", score: 64, x: 68, y: 55, concern: "moisture" },
+const FEATURES = [
+  {
+    icon: Camera,
+    title: "YouCam V2.1 Integration",
+    description: "16-channel biometric skin analysis powered by AI",
+    value: "16 concerns",
+  },
+  {
+    icon: BarChart3,
+    title: "Bio-Inventory Engine",
+    description: "Detects conflicts between your scan and shelf products",
+    value: "Real-time",
+  },
+  {
+    icon: Shield,
+    title: "Vehicle Matrix",
+    description: "Texture compatibility mapped to your skin type",
+    value: "4 skin types",
+  },
+  {
+    icon: Droplet,
+    title: "Sensory Barrier",
+    description: "Flags irritants for sensitive skin",
+    value: "2-tier",
+  },
 ];
 
-export function ScanLanding({ onStart, scanData, setScanData }: ScanLandingProps) {
-  const [skinProfile, setSkinProfile] = useState<{ type: SkinType; sensitive: Sensitivity }>({ type: "normal", sensitive: false });
-  const [activeReticle, setActiveReticle] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"portrait" | "dermal" | "masks">("portrait");
-  const [isScanning, setIsScanning] = useState(false);
-  const stageRef = useRef<HTMLDivElement>(null);
+const MOCK_MASKS = [
+  { src: "/demo-scan/mask_wrinkle.png", label: "Wrinkles" },
+  { src: "/demo-scan/mask_pore.png", label: "Pores" },
+  { src: "/demo-scan/mask_acne.png", label: "Acne" },
+  { src: "/demo-scan/mask_dark_circle.png", label: "Dark Circles" },
+];
 
-  const handleDemoScan = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      setScanData(mockScan);
-      setIsScanning(false);
-      onStart();
-    }, 1200);
-  };
+export function ScanLanding({
+  onStart,
+  scanData,
+  setScanData,
+  selectedImage,
+  setSelectedImage,
+}: ScanLandingProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [useDemo, setUseDemo] = useState(true);
 
-  // 3D Parallax Motion Values
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const springX = useSpring(mouseX, { stiffness: 200, damping: 25 });
-  const springY = useSpring(mouseY, { stiffness: 200, damping: 25 });
-  const rotateX = useTransform(springY, [-1, 1], [-4, 4]);
-  const rotateY = useTransform(springX, [-1, 1], [4, -4]);
-  const translateZ = useTransform(springX, [-1, 1], [-20, 20]);
+  const handleFileUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!stageRef.current) return;
-    const rect = stageRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const deltaX = (e.clientX - centerX) / (rect.width / 2);
-    const deltaY = (e.clientY - centerY) / (rect.height / 2);
-    mouseX.set(Math.max(-1, Math.min(1, deltaX)));
-    mouseY.set(Math.max(-1, Math.min(1, deltaY)));
-  };
+      setIsUploading(true);
+      setUploadError(null);
 
-  const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("tier", "HD");
+        formData.append("concerns", "all");
+
+        const response = await fetch("/api/youcam/scan", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.isFallback || !result.results) {
+          setUploadError(
+            "Could not complete analysis. Using demo scan results instead."
+          );
+          setUseDemo(true);
+          return;
+        }
+
+        setUseDemo(false);
+        setScanData(result.results);
+        setUploadError(null);
+      } catch (err) {
+        setUploadError(
+          err instanceof Error ? err.message : "Upload failed. Try again."
+        );
+        setUseDemo(true);
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [setScanData, setUseDemo]
+  );
+
+  const handleDemoScan = useCallback(() => {
+    setUseDemo(true);
+  }, []);
+
+  const handleFileSelect = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp";
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      handleFileUpload({ target } as React.ChangeEvent<HTMLInputElement>);
+    };
+    input.click();
+  }, [handleFileUpload]);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith("image/")) {
+        handleFileUpload(createFileEvent(file));
+      }
+    },
+    [handleFileUpload]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const createFileEvent = (file: File): React.ChangeEvent<HTMLInputElement> => ({
+    target: { files: [file] },
+    currentTarget: { files: [file] },
+    nativeEvent: new Event("change"),
+    bubbles: false,
+    cancelable: true,
+    defaultPrevented: false,
+    eventPhase: 0,
+    isDefaultPrevented: () => false,
+    isPropagationStopped: () => false,
+    isTrusted: false,
+    persist: () => {},
+    preventDefault: () => {},
+    stopPropagation: () => {},
+    timeStamp: Date.now(),
+    type: "change",
+  } as unknown as React.ChangeEvent<HTMLInputElement>);
+
+  const skinType: SkinType = scanData.skinType
+    ? scanData.skinType.type.toLowerCase() as SkinType
+    : "normal";
+
+  const defaultSkinProfile: SkinProfile = {
+    type: skinType,
+    sensitive: scanData.concerns.some(
+      (c) => c.type === "hd_redness" && c.uiScore < 65
+    )
+      ? "sensitive"
+      : "normal",
   };
 
   return (
-    <div className="min-h-screen bg-[var(--ca-studiomid)] relative overflow-hidden">
-      {/* Ambient Radial Glow */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-30 blur-[200px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-skin-warm) 0%, transparent 70%)" }} />
-        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] rounded-full opacity-20 blur-[150px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-gold-warm) 0%, transparent 70%)" }} />
-        <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] rounded-full opacity-15 blur-[120px]"
-          style={{ background: "radial-gradient(ellipse at center, var(--ca-skin-neutral) 0%, transparent 70%)" }} />
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      <div className="atelier-studio-backdrop" />
 
-      {/* Top Atelier Navigation */}
-      <header className="relative z-20 w-full border-b border-[var(--ca-stone-border)] bg-[var(--ca-studiomid)]/80 backdrop-blur-xl">
-        <div className="atelier-container flex h-16 items-center justify-between">
-          {/* Left: Stage Indicators */}
-          <nav className="flex items-center gap-6" aria-label="Atelier stages">
-            <span className="atelier-stage-indicator active" data-stage="1">
-              <span className="text-mono-lg">01</span> Skin Telemetry
-            </span>
-            <span className="atelier-stage-indicator" data-stage="2">
-              <span className="text-mono-lg">02</span> Bio-Shelf Audit
-            </span>
-            <span className="atelier-stage-indicator" data-stage="3">
-              <span className="text-mono-lg">03</span> Formulation Ledger
-            </span>
-          </nav>
+      {/* Grid pattern overlay */}
+      <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.03]" />
 
-          {/* Center: Wordmark */}
-          <h1 className="text-h2 font-light tracking-tight" style={{ fontFamily: "var(--font-cormorant)" }}>
+      <div className="relative mx-auto max-w-6xl px-4 py-12">
+        {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-16 text-center"
+        >
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#E5C185]/30 bg-[#E5C185]/10 px-3 py-1">
+            <Sparkles className="h-3.5 w-3.5 text-[#E5C185]" />
+            <span className="font-mono-tech text-xs text-[#E5C185]">
+              YouCam V2.1 · 16-Channel Biometry · Bio-Inventory Engine
+            </span>
+          </div>
+
+          <h1 className="font-serif-editorial mb-4 text-5xl font-normal text-[#F7F4EF] md:text-6xl">
             ShelfWise Atelier
           </h1>
 
-          {/* Right: Controls */}
-          <div className="flex items-center gap-3">
-            {/* Currency Switch */}
-            <div className="hidden md:flex items-center gap-1.5 bg-[var(--ca-glass-bg)] border border-[var(--ca-glass-border)] rounded-full px-3 py-1.5 backdrop-blur-xl">
-              <span className="text-body-sm text-[var(--ca-ink-subtle)]">₹ INR</span>
-              <span className="text-body-sm font-medium text-[var(--ca-paper)]">/</span>
-              <span className="text-body-sm text-[var(--ca-gold-warm)]">$ USD</span>
-            </div>
+          <p className="mx-auto max-w-2xl text-lg text-[#C4BDB3]">
+            Scan your skin with YouCam V2.1 AI. Audit your existing skincare shelf
+            for active & vehicle conflicts. Buy only what you need — often ₹0.
+          </p>
+        </motion.div>
 
-            {/* Instant Scan Trigger */}
-            <button
-              onClick={handleDemoScan}
-              disabled={isScanning}
-              className="atelier-btn-primary hidden sm:inline-flex"
+        {/* File Upload & Demo */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <TiltCard glass={false} stone className="mb-8 p-8">
+            <div
+              className="relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] p-8 text-center transition-all duration-200 hover:border-white/30"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onClick={handleFileSelect}
             >
-              {isScanning ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-[var(--ca-ink)]/30 border-t-[var(--ca-ink)] rounded-full animate-spin" />
-                  Scanning…
-                </>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+              />
+
+              {selectedImage ? (
+                <img
+                  src={selectedImage}
+                  alt="Selected selfie"
+                  className="h-48 w-auto rounded-lg object-cover"
+                />
               ) : (
                 <>
-                  <Search className="h-4 w-4" />
-                  Instant 16-Concern Scan
+                  <div className="mb-4 rounded-xl bg-white/5 p-4">
+                    <Upload className="h-10 w-10 text-[#E5C185]" />
+                  </div>
+                  <h3 className="font-serif-editorial mb-2 text-xl text-[#F7F4EF]">
+                    Upload Your Selfie for Analysis
+                  </h3>
+                  <p className="mb-4 max-w-md text-sm text-[#C4BDB3]">
+                    Drag & drop your photo or click to upload. We'll run a full
+                    YouCam V2.1 HD scan with 16 skin concerns.
+                  </p>
+                  {uploadError && (
+                    <p className="text-sm text-[#F87171]">{uploadError}</p>
+                  )}
                 </>
               )}
-            </button>
 
-            {/* Mobile Menu */}
-            <button className="md:hidden atelier-btn-ghost" aria-label="Menu">
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+              {isUploading && (
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <div className="flex items-center gap-2 text-[#E5C185]">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Scan className="h-5 w-5" />
+                    </motion.div>
+                    <span className="font-mono-tech text-sm">
+                      Analyzing skin with YouCam V2.1...
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
 
-      {/* Full-Viewport Hero Stage */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-[1200px] mx-auto">
-          {/* Portrait Stage */}
-          <div
-            ref={stageRef}
-            className="atelier-portrait-stage"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-          >
-            <motion.div
-              className="atelier-portrait-frame relative rounded-2xl overflow-hidden"
-              style={{
-                transformStyle: "preserve-3d",
-                rotateX,
-                rotateY,
-                translateZ,
-              }}
-              initial={{ opacity: 0, scale: 0.98, rotateX: 6, rotateY: -6 }}
-              animate={{ opacity: 1, scale: 1, rotateX: 0, rotateY: 0 }}
-              transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+            {/* Demo Fallback */}
+            <div className="flex items-center gap-3 text-center">
+              <div className="flex-1 border-t border-white/12"></div>
+              <span className="font-mono-tech text-xs text-[#8A8177]">
+                Or try the demo
+              </span>
+              <div className="flex-1 border-t border-white/12"></div>
+            </div>
+
+            <motion.button
+              type="button"
+              onClick={handleDemoScan}
+              className="mx-auto mt-4 flex items-center gap-2 rounded-full border border-[#34D399]/30 bg-[#34D399]/10 px-5 py-2 font-mono-tech text-xs text-[#34D399] transition-all hover:bg-[#34D399]/20"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              {/* Portrait Image */}
-              <div className="absolute inset-0">
-                <img
-                  src="https://images.unsplash.com/photo-1554151228-14d9def656e4?w=800&h=1067&fit=crop&crop=face"
-                  alt="Clinical skin analysis portrait"
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                />
-                {/* Subtle vignette */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--ca-studiomid)] opacity-60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--ca-studiomid)]/40 via-transparent to-transparent" />
+              <Sparkles className="h-3.5 w-3.5" />
+              Run Demo Scan (no upload needed)
+            </motion.button>
+          </TiltCard>
+        </motion.div>
+
+        {/* Features Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <TiltCard key={feature.title} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-[#E5C185]/10 p-2">
+                      <Icon className="h-5 w-5 text-[#E5C185]" />
+                    </div>
+                    <div>
+                      <h4 className="font-serif-editorial text-sm font-medium text-[#F7F4EF]">
+                        {feature.title}
+                      </h4>
+                      <p className="mt-1 text-xs text-[#C4BDB3]/70">
+                        {feature.description}
+                      </p>
+                      <span className="font-mono-tech text-xs text-[#E5C185]">
+                        {feature.value}
+                      </span>
+                    </div>
+                  </div>
+                </TiltCard>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Scan Results Preview + Skin Profile */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <TiltCard className="mb-8 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-serif-editorial text-xl text-[#F7F4EF]">
+                Scan Profile
+              </h2>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono-tech text-xs text-[#8A8177]">
+                  Data source:
+                </span>
+                <span
+                  className={`font-mono-tech text-xs font-medium ${
+                    useDemo ? "text-[#E5C185]" : "text-[#34D399]"
+                  }`}
+                >
+                  {useDemo ? "Demo Mode" : "YouCam Live"}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C4BDB3]">
+                    Top Priority Concerns
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {scanData.concerns
+                    .sort((a, b) => a.uiScore - b.uiScore)
+                    .slice(0, 5)
+                    .map((concern) => {
+                      const label =
+                        CONCERN_LABELS[concern.type] || concern.type;
+                      const colorScore =
+                        concern.uiScore >= 85
+                          ? CONCERN_COLORS.low
+                          : concern.uiScore >= 60
+                            ? CONCERN_COLORS.medium
+                            : CONCERN_COLORS.high;
+
+                      return (
+                        <div
+                          key={concern.type}
+                          className="flex items-center gap-3"
+                        >
+                          <div className="w-32 flex-shrink-0">
+                            <span className="font-mono-tech text-xs text-[#C4BDB3]">
+                              {label}
+                            </span>
+                          </div>
+                          <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-white/5">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{
+                                backgroundColor: colorScore,
+                                width: `${Math.max(
+                                  (100 - concern.uiScore) / 100 * 100,
+                                  3
+                                )}%`,
+                              }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(100 - concern.uiScore) / 100 * 100}%` }}
+                              transition={{ duration: 0.8, delay: 0.2 }}
+                            />
+                          </div>
+                          <div
+                            className="w-12 text-right font-mono-tech text-xs font-medium"
+                            style={{ color: colorScore }}
+                          >
+                            {concern.uiScore}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
 
-              {/* Mask Overlay Layer */}
-              <AnimatePresence mode="popLayout">
-                {viewMode === "masks" && (
-                  <motion.div
-                    className="absolute inset-0"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 400 }}
-                  >
-                    <div className="absolute inset-0 bg-[var(--ca-studiomid)]/30" />
-                    {reticleZones.map((zone, i) => (
-                      <motion.div
-                        key={zone.id}
-                        className="atelier-mask-overlay"
-                        style={{
-                          backgroundImage: `radial-gradient(ellipse at ${zone.x}% ${zone.y}%, var(--ca-skin-warm) 0%, transparent 40%)`,
-                          opacity: 0.5,
-                        }}
-                        initial={{ opacity: 0, scale: 1.2 }}
-                        animate={{ opacity: 0.5, scale: 1 }}
-                        transition={{ delay: 0.1 + i * 0.08, duration: 500 }}
-                      />
-                    ))}
-                  </motion.div>
-                )}
+              <div className="flex flex-col gap-4">
+                <TiltCard glass className="p-4">
+                  <div className="text-center">
+                    <div className="font-mono-tech text-xs uppercase tracking-[0.12em] text-[#8A8177]">
+                      Overall Score
+                    </div>
+                    <div className="font-serif-editorial mt-1 text-3xl text-[#F7F4EF]">
+                      {scanData.overallScore.toFixed(1)}
+                    </div>
+                    <div className="mt-1 font-mono-tech text-xs text-[#C4BDB3]">
+                      Skin Age: {scanData.skinAge}
+                    </div>
+                  </div>
+                </TiltCard>
 
-                {viewMode === "dermal" && (
-                  <motion.div
-                    className="absolute inset-0"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 400 }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-b from-[var(--ca-studiomid)]/20 via-transparent to-[var(--ca-studiomid)]/40" />
-                    {/* Dermal layer lines */}
-                    <svg className="w-full h-full" viewBox="0 0 400 533" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="dermalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.15" />
-                          <stop offset="30%" stopColor="#FFFFFF" stopOpacity="0.08" />
-                          <stop offset="60%" stopColor="#FFFFFF" stopOpacity="0.04" />
-                          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#dermalGradient)" />
-                      {/* Stratum Corneum line */}
-                      <line x1="0" y1="80" x2="400" y2="80" stroke="var(--ca-gold-warm)" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.4" />
-                      <text x="20" y="75" fill="var(--ca-gold-warm)" fontSize="9" fontFamily="Inter" opacity="0.6">Stratum Corneum</text>
-                      {/* Epidermis line */}
-                      <line x1="0" y1="180" x2="400" y2="180" stroke="var(--ca-skin-warm)" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.4" />
-                      <text x="20" y="175" fill="var(--ca-skin-warm)" fontSize="9" fontFamily="Inter" opacity="0.6">Epidermis</text>
-                      {/* Dermis line */}
-                      <line x1="0" y1="320" x2="400" y2="320" stroke="var(--ca-crimson)" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.4" />
-                      <text x="20" y="315" fill="var(--ca-crimson)" fontSize="9" fontFamily="Inter" opacity="0.6">Dermis</text>
-                      {/* Hypodermis line */}
-                      <line x1="0" y1="460" x2="400" y2="460" stroke="var(--ca-gold-deep)" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.4" />
-                      <text x="20" y="455" fill="var(--ca-gold-deep)" fontSize="9" fontFamily="Inter" opacity="0.6">Hypodermis</text>
-                    </svg>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                <TiltCard glass className="p-4">
+                  <div className="text-center">
+                    <div className="font-mono-tech text-xs uppercase tracking-[0.12em] text-[#8A8177]">
+                      Biome Reading
+                    </div>
+                    <div className="mt-2 flex justify-center gap-3">
+                      <div>
+                        <div className="font-serif-editorial text-lg text-[#F7F4EF]">
+                          {scanData.skinType.type}
+                        </div>
+                        <div className="font-mono-tech text-[10px] text-[#8A8177]">
+                          {scanData.skinType.region}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TiltCard>
 
-              {/* Diagnostic Reticles */}
-              {reticleZones.map((zone) => (
-                <motion.div
-                  key={zone.id}
-                  className={`atelier-reticle ${activeReticle === zone.id ? "active" : ""}`}
-                  style={{
-                    left: `${zone.x}%`,
-                    top: `${zone.y}%`,
-                    width: "80px",
-                    height: "80px",
-                    transform: "translate(-50%, -50%)",
-                  }}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: activeReticle === zone.id ? 1 : 0.7, scale: 1 }}
-                  transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 20 }}
-                  onMouseEnter={() => setActiveReticle(zone.id)}
-                  onMouseLeave={() => setActiveReticle(activeReticle === zone.id ? null : activeReticle)}
-                >
-                  <motion.div
-                    className="atelier-reticle-label"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: activeReticle === zone.id ? 1 : 0, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    {zone.label} <span className="text-mono-lg ml-1">{zone.score}</span>
-                  </motion.div>
-                  {/* Corner accents */}
-                  <div className="absolute -top-2 -left-2 w-3 h-3 border-t-[1.5px] border-l-[1.5px] border-[var(--ca-paper)]" />
-                  <div className="absolute -top-2 -right-2 w-3 h-3 border-t-[1.5px] border-r-[1.5px] border-[var(--ca-paper)]" />
-                  <div className="absolute -bottom-2 -left-2 w-3 h-3 border-b-[1.5px] border-l-[1.5px] border-[var(--ca-paper)]" />
-                  <div className="absolute -bottom-2 -right-2 w-3 h-3 border-b-[1.5px] border-r-[1.5px] border-[var(--ca-paper)]" />
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[var(--ca-glass-bg)] border border-[var(--ca-glass-border)] rounded-full px-4 py-2 backdrop-blur-xl">
-            <button
-              onClick={() => setViewMode("portrait")}
-              className={`atelier-btn-ghost px-3 py-1.5 ${viewMode === "portrait" ? "text-[var(--ca-paper)] bg-[var(--ca-gold-warm)]/20 border border-[var(--ca-gold-warm)]/30" : ""}`}
-            >
-              <Eye className="h-4 w-4" />
-              <span className="hidden sm:inline">Portrait</span>
-            </button>
-            <button
-              onClick={() => setViewMode("masks")}
-              className={`atelier-btn-ghost px-3 py-1.5 ${viewMode === "masks" ? "text-[var(--ca-paper)] bg-[var(--ca-gold-warm)]/20 border border-[var(--ca-gold-warm)]/30" : ""}`}
-            >
-              <SparklesIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">16 Masks</span>
-            </button>
-            <button
-              onClick={() => setViewMode("dermal")}
-              className={`atelier-btn-ghost px-3 py-1.5 ${viewMode === "dermal" ? "text-[var(--ca-paper)] bg-[var(--ca-gold-warm)]/20 border border-[var(--ca-gold-warm)]/30" : ""}`}
-            >
-              <Layers className="h-4 w-4" />
-              <span className="hidden sm:inline">3D Dermal</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Bottom-Left: Editorial Headline & Primary CTA */}
-        <div className="absolute bottom-8 left-4 right-1/2 max-w-md animate-slide-up stagger-1">
-          <div className="flex flex-col items-start gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-display font-light leading-tight text-[var(--ca-paper)]">Clinical</span>
-              <span className="text-display font-light leading-tight text-[var(--ca-gold-warm)] italic">Proportion.</span>
+                <TiltCard glass className="p-4">
+                  <div className="text-center">
+                    <div className="font-mono-tech text-xs uppercase tracking-[0.12em] text-[#8A8177]">
+                      Mask Overlays
+                    </div>
+                    <div className="mt-2 flex gap-1.5 justify-center">
+                      {MOCK_MASKS.map((mask) => (
+                        <motion.button
+                          key={mask.src}
+                          type="button"
+                          onClick={() => setSelectedImage(mask.src)}
+                          className="relative h-8 w-8 overflow-hidden rounded border border-white/10"
+                          whileHover={{ scale: 1.1 }}
+                        >
+                          <motion.img
+                            src={mask.src}
+                            alt={mask.label}
+                            className="h-full w-full object-cover opacity-60 hover:opacity-100"
+                          />
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </TiltCard>
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleDemoScan}
-                disabled={isScanning}
-                className="atelier-btn-primary w-full sm:w-auto"
-              >
-                <Upload className="h-4 w-4" />
-                {isScanning ? "Scanning…" : "Scan Your Skin"}
-              </button>
-              <button
-                onClick={handleDemoScan}
-                disabled={isScanning}
-                className="atelier-btn-secondary w-full sm:w-auto"
-              >
-                <Image className="h-4 w-4" />
-                <span className="hidden sm:inline">Run Verified 16-Concern Scan</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+          </TiltCard>
+        </motion.div>
 
-        {/* Bottom-Right: Philosophical Copy & Skin Type Selector */}
-        <div className="absolute bottom-8 right-4 left-1/2 max-w-md animate-slide-up stagger-2">
-          <div className="flex flex-col items-end gap-6 text-right">
-            <p className="text-body text-[var(--ca-ink-muted)] leading-relaxed">
-              "A private clinical atelier for those who seek barrier harmony — not a 7-step routine.
-              Often our verdict is simple: Buy Nothing. ₹0 needed."
-            </p>
-            <div className="w-full">
-              <SkinTypeSelector
-                value={skinProfile}
-                onChange={setSkinProfile}
-                youcamDetected={scanData.skinType?.type ? (() => {
-                  const lower = scanData.skinType?.type?.toLowerCase();
-                  if (lower?.includes("oily")) return "oily";
-                  if (lower?.includes("dry")) return "dry";
-                  if (lower?.includes("combination") || lower?.includes("mix")) return "combination";
-                  return "normal";
-                })() : undefined}
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-      </main>
+        {/* Skin Type Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <SkinTypeSelector
+            value={{
+              ...defaultSkinProfile,
+              sensitive: scanData.concerns.some(
+                (c) => c.type === "hd_redness" && c.uiScore < 65
+              )
+                ? "sensitive"
+                : "normal",
+            }}
+            onChange={(profile) => {
+              const newSkinType =
+                profile.type.charAt(0).toUpperCase() + profile.type.slice(1) as Capitalize<SkinType>;
+              setScanData({
+                ...scanData,
+                skinType: {
+                  type: newSkinType as ParsedScan["skinType"]["type"],
+                  region: scanData.skinType.region,
+                },
+              });
+            }}
+            youcamDetected={skinType}
+            compact
+          />
+        </motion.div>
 
-      {/* Bottom scroll indicator */}
-      <motion.div
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[var(--ca-ink-faint)]"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, duration: 600 }}
-      >
-        <ChevronDown className="h-6 w-6 animate-bounce" style={{ animationDuration: "2s" }} />
-        <span className="text-body-xs uppercase tracking-widest">Scroll for Dermal Telemetry</span>
-      </motion.div>
+        {/* Call to Action */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-12 text-center"
+        >
+          <motion.button
+            type="button"
+            onClick={onStart}
+            className="group relative inline-flex items-center gap-3 rounded-full border border-[#E5C185]/30 bg-[#E5C185] px-8 py-4 font-serif-editorial text-lg font-normal text-[#141210] shadow-[0_20px_60px_rgba(229,193,133,0.3)] transition-all duration-300 hover:border-[#E5C185]/60 hover:shadow-[0_20px_60px_rgba(229,193,133,0.5)]"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Scan className="h-5 w-5 transition-transform group-hover:scale-110" />
+            <span>Begin Shelf Audit</span>
+
+            <motion.div
+              className="absolute -inset-px rounded-full opacity-0 group-hover:opacity-100"
+              style={{
+                background:
+                  "radial-gradient(360px circle at 50% 50%, rgba(229, 193, 133, 0.2), transparent 70%)",
+              }}
+              aria-hidden="true"
+            />
+          </motion.button>
+
+          <div className="mt-4 text-xs text-[#8A8177]">
+            By starting the audit, you agree to our clinical analysis terms.
+            Your scan data is processed locally and never stored.
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
 
+export default ScanLanding;

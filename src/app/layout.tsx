@@ -1,45 +1,30 @@
 import type { Metadata } from "next";
-import {
-  Inter,
-  Cormorant_Garamond,
-  Fira_Code,
-} from "next/font/google";
+import { Cormorant_Garamond, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { ToastProvider } from "@/components/ui/use-toast";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600"],
-});
 
 const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
   subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
 });
 
-const firaCode = Fira_Code({
-  variable: "--font-fira-code",
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  display: "swap",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
   weight: ["400", "500"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "ShelfWise Atelier — Clinical Skin Analysis & Bio-Inventory Audit",
+  title: "ShelfWise Atelier — Clinical Skin AI & Bio-Inventory Audit",
   description:
-    "Luxury clinical skin analysis via Perfect Corp YouCam V2.1 API. 3D dermal telemetry, INCI formulation intelligence, and a verdict ledger — often Buy Nothing, ₹0 needed.",
-  keywords:
-    "skin analysis, skincare audit, ingredient conflict, YouCam API, clinical skincare, dermal telemetry",
-  openGraph: {
-    title: "ShelfWise Atelier — Clinical Skin Analysis & Bio-Inventory Audit",
-    description:
-      "A private clinical atelier for barrier harmony. 16-concern YouCam scan, 3D exploded dermal layers, INCI formulation studio.",
-    type: "website",
-  },
+    "Scan your skin with YouCam V2.1 AI. Audit your existing skincare shelf for active & vehicle conflicts. Buy only what you need — often ₹0.",
 };
 
 export default function RootLayout({
@@ -48,11 +33,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body
-        className={`${inter.variable} ${cormorant.variable} ${firaCode.variable} min-h-screen bg-[var(--ca-studiomid)] text-[var(--ca-paper)] antialiased`}
-      >
-        <ToastProvider>{children}</ToastProvider>
+    <html
+      lang="en"
+      className={`${cormorant.variable} ${jakarta.variable} ${jetbrains.variable} dark`}
+    >
+      <body className="min-h-screen bg-[#161310] text-[#F7F4EF] antialiased">
+        {children}
       </body>
     </html>
   );

@@ -5,12 +5,14 @@ export interface ParsedScan {
   skinType: YouCamSkinType;
   skinAge: number;
   overallScore: number;
+  source?: "youcam" | "demo";
 }
 
 export const mockScan: ParsedScan = {
   skinType: { type: "Normal", region: "whole" },
   skinAge: 28,
   overallScore: 86.33,
+  source: "demo",
   concerns: [
     { type: "hd_wrinkle", uiScore: 98, rawScore: 99, maskUrls: [] },
     { type: "hd_pore", uiScore: 91, rawScore: 94, maskUrls: [] },

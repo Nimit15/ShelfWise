@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const VIEWPORTS = [
   { name: "desktop-1440x900", width: 1440, height: 900 },
@@ -6,99 +6,67 @@ const VIEWPORTS = [
   { name: "tablet-768x1024", width: 768, height: 1024 },
 ];
 
+async function startDemo(page: Page) {
+  await page.getByRole("button", { name: "Run Demo Scan (no upload needed)" }).click();
+  await expect(page.getByText("Demo fixture", { exact: true })).toBeVisible();
+}
+
+async function startResults(page: Page) {
+  await startDemo(page);
+  await page.getByRole("button", { name: "Begin Shelf Audit" }).click();
+}
+
+async function startAudit(page: Page) {
+  await startResults(page);
+  await page.getByRole("button", { name: "Shelf Audit" }).click();
+}
+
 for (const viewport of VIEWPORTS) {
-  test.describe(`Visual verification @ ${viewport.name}`, () => {
+  test.describe(`Visual verification · ${viewport.name}`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-    test("landing page renders correctly", async ({ page }) => {
+    test("landing page", async ({ page }) => {
       await page.goto("/");
-      await page.waitForLoadState("networkidle");
-      await page.waitForTimeout(1000);
-
-      // Check main elements are visible
-      await expect(page.locator("h1:has-text('ShelfWise Atelier')").first()).toBeVisible();
-      await expect(page.locator("text=Upload Your Selfie for Analysis")).toBeVisible();
-
-      // Screenshot
+      await expect(page.getByRole("heading", { name: "ShelfWise", level: 1 })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Run Demo Scan (no upload needed)" })).toBeVisible();
       await page.screenshot({
         path: `test-results/screenshots/landing-${viewport.name}.png`,
-        fullPage: true
+        fullPage: true,
       });
     });
 
-    test("scan results page", async ({ page }) => {
+    test("scan profile and results", async ({ page }) => {
       await page.goto("/");
-      await page.waitForLoadState("networkidle");
-      await page.waitForTimeout(1000);
-
-      // Start analysis (upload test image)
-      await page.setInputFiles('input[type="file"]', 'public/sample-selfie.jpg');
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState("networkidle");
-
-      // Click "Begin Shelf Audit" to navigate to results view
-      await page.click('button:has-text("Begin Shelf Audit")');
-      await page.waitForTimeout(1000);
-      await page.waitForLoadState("networkidle");
-
-      // Screenshot
+      await startDemo(page);
+      await expect(page.getByText("Scan Profile")).toBeVisible();
+      await page.getByRole("button", { name: "Begin Shelf Audit" }).click();
+      await expect(page.getByText("Priority Concerns")).toBeVisible();
       await page.screenshot({
         path: `test-results/screenshots/results-${viewport.name}.png`,
-        fullPage: true
+        fullPage: true,
       });
     });
 
-    test("audit page", async ({ page }) => {
+    test("shelf audit", async ({ page }) => {
       await page.goto("/");
-      await page.waitForLoadState("networkidle");
-      await page.waitForTimeout(1000);
-
-      // Navigate to audit page
-      await page.setInputFiles('input[type="file"]', 'public/sample-selfie.jpg');
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState("networkidle");
-
-      await page.click('button:has-text("Begin Shelf Audit")');
-      await page.waitForTimeout(1000);
-      await page.waitForLoadState("networkidle");
-
-      await page.click("button:has-text('Shelf Audit')");
-      await page.waitForTimeout(1000);
-      await page.waitForLoadState("networkidle");
-
-      // Screenshot
+      await startAudit(page);
+      await expect(page.getByRole("heading", { name: "Bio-Inventory Conflicts" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Your Shelf" })).toBeVisible();
       await page.screenshot({
         path: `test-results/screenshots/audit-${viewport.name}.png`,
-        fullPage: true
+        fullPage: true,
       });
     });
 
-    test("verdict page", async ({ page }) => {
+    test("final verdict", async ({ page }) => {
       await page.goto("/");
-      await page.waitForLoadState("networkidle");
-      await page.waitForTimeout(1000);
-
-      // Navigate to verdict
-      await page.setInputFiles('input[type="file"]', 'public/sample-selfie.jpg');
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState("networkidle");
-
-      await page.click('button:has-text("Begin Shelf Audit")');
-      await page.waitForTimeout(1000);
-      await page.waitForLoadState("networkidle");
-
-      await page.click("button:has-text('Shelf Audit')");
-      await page.waitForTimeout(1000);
-      await page.waitForLoadState("networkidle");
-
-      await page.click("button:has-text('Final Verdict')");
-      await page.waitForTimeout(1000);
-      await page.waitForLoadState("networkidle");
-
-      // Screenshot
+      await startAudit(page);
+      await page.getByRole("button", { name: "Final Verdict" }).click();
+      await expect(page.getByRole("heading", { name: "Clinical Verdict" })).toBeVisible();
+      await expect(page.getByText("Final Routine")).toBeVisible();
       await page.screenshot({
         path: `test-results/screenshots/verdict-${viewport.name}.png`,
-        fullPage: true
+        fullPage: true,
       });
     });
   });

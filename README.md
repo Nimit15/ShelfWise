@@ -1,111 +1,163 @@
-# ShelfWise 
+<!-- ShelfWise project README -->
+<div align="center">
+  <img src="docs/assets/hero-banner.svg" alt="ShelfWise — skin analysis and skincare shelf audit" width="100%" />
+  <h1>ShelfWise</h1>
+  <p><strong>Scan your skin. Audit your shelf. Buy only what fits.</strong></p>
+  <p>
+    <a href="https://github.com/Nimit15/ShelfWise"><img src="https://img.shields.io/badge/project-ShelfWise-E5C185?style=flat-square" alt="ShelfWise" /></a>
+    <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.4.2-111111?style=flat-square&logo=nextdotjs" alt="Next.js 16.4.2" /></a>
+    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript" alt="TypeScript" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-34D399?style=flat-square" alt="MIT License" /></a>
+  </p>
+</div>
 
-**Clinical-Grade Skincare Intelligence**
+ShelfWise connects **Perfect Corp YouCam V2.1 skin analysis** with an explainable, rule-based audit of the skincare products a person already owns. Instead of automatically pushing a longer routine, it checks the relationship between scan concerns, skin profile, product ingredients, texture vehicles, and routine timing—then shows what to keep, pause, separate, or consider adding.
 
-ShelfWise is a skin analysis and skincare inventory audit application built for the Perfect Corp YouCam API Skin AI & eCommerce VTO Hackathon. It combines the YouCam V2.1 SD Skin Analysis API with a deterministic clinical bio-inventory engine to deliver personalized, evidence-based skincare recommendations.
+Its defining outcome is simple: **a useful skincare routine can end with “Buy Nothing · ₹0 Needed.”**
+
+## Why ShelfWise
+
+Most skincare recommendation experiences begin with another product suggestion. ShelfWise starts with the user's existing shelf.
+
+It combines two sources of context:
+
+- **Skin context:** YouCam's 16-channel SD or HD skin-analysis output, followed by skin-type and sensitivity calibration.
+- **Shelf context:** the products already in a routine, their INCI ingredients, functional roles, irritancy estimates, texture vehicles, usage slots, and price assumptions.
+
+The recommendation engine evaluates both together, making the result more practical than a generic scan-to-shopping-list flow.
+
+## How it works
+
+1. **Scan:** Upload a front-facing selfie for a live YouCam V2.1 analysis, or use the clearly labeled sample demo without uploading a photo or consuming API credits.
+2. **Calibrate:** Review the scan profile and confirm skin type and sensitive-barrier preference. Higher YouCam `ui_score` values indicate healthier-looking skin.
+3. **Audit:** Compare the scan against the products on the shelf. The engine flags potential barrier-related conflicts, incompatible active combinations, skin-type or texture mismatches, avoided ingredients, and duplicate functional roles.
+4. **Decide:** Review the Keep / Pause / Reference outcome, AM/PM routine, budget-aware gaps, cost-per-day estimates, and the option to buy nothing.
+
+The scan-results experience also includes a five-layer, 3D-styled dermal visualization that maps concern categories to educational skin-layer context. It is an explanatory visualization, not an anatomical measurement.
+
+## Core capabilities
+
+| Capability | What it does |
+| --- | --- |
+| YouCam V2.1 integration | Server-side file upload, task creation and polling, response parsing, credit estimates, and rate limiting |
+| Skin-profile resolver | Infers skin type, sensitivity, barrier status, and a confidence estimate; user selections can override inferred values |
+| INCI parser | Extracts ingredient names, identifies known actives, estimates functional roles and irritancy, and infers formulation characteristics |
+| Bio-inventory engine | Evaluates scan-to-shelf concerns, active combinations, skin-type compatibility, texture vehicles, and role redundancy |
+| Routine optimizer | Builds AM/PM steps, respects routine preference and budget constraints, and surfaces targeted reference formulations |
+| Impact telemetry | Summarizes conflicts, compatibility, cost-per-day, and estimated savings |
+| Demo experience | Uses a deterministic sample fixture and explicitly identifies it as demo data |
+
+The product catalog is a reference dataset for the prototype. It is not a live retailer inventory, and recommendations do not include checkout or purchase links.
 
 ## Architecture
 
-The application follows a clean Next.js 16 App Router architecture with a 5-view state machine:
+![ShelfWise architecture](docs/assets/system-architecture.svg)
 
-1. **Landing Page** - Selfie upload and demo scan functionality
-2. **Results View** - 16-channel biometric telemetry report with 3D dermal stack visualization
-3. **Audit View** - Bio-inventory bathroom shelf audit with conflict detection
-4. **Product View** - Detailed product information and compatibility analysis
-5. **Verdict View** - Clinical decision ledger with actionable recommendations
+The main application flow is orchestrated in `src/app/page.tsx`. Business rules live separately from the interface in `src/lib/engine/optimizer.ts`, while YouCam request/response handling is in `src/lib/youcam.ts`.
 
-### Core Components
+Key modules:
 
-- **YouCam V2.1 SD API Integration**: 16-concern skin analysis with mask visualization
-- **Bio-Inventory Engine**: Three-layer conflict detection system
-- **Clinical Apothecary Design System**: CSS variable-based design tokens with professional typography
-- **16-Concern Skin Profile**: Comprehensive skin assessment with sensitivity detection
+- `src/app/api/youcam/scan/route.ts` — live YouCam scan endpoint
+- `src/app/api/youcam/demo/route.ts` — deterministic server-side demo endpoint
+- `src/app/api/youcam/status/route.ts` — credit and feature-cost information
+- `src/app/api/engine/audit/route.ts` — server-side audit endpoint
+- `src/app/api/engine/parse-inci/route.ts` — custom INCI parsing endpoint
+- `src/lib/engine/optimizer.ts` — conflict detection, compatibility scoring, and routine optimization
+- `src/lib/engine/skin-type-resolver.ts` — skin type, sensitivity, and barrier inference
+- `src/lib/inci-parser.ts` — ingredient parsing and product inference
+- `src/lib/engine/telemetry.ts` — savings and compatibility summaries
 
-## Key Features
+See [the engine and API guide](docs/FRONTEND_INTEGRATION_GUIDE.md) for routes, data contracts, and test commands.
 
-### YouCam V2.1 SD Skin Analysis
-- 16 biometric concerns: wrinkle, pore, texture, acne, oiliness, radiance, eye_bag, age_spot, dark_circle_v2, droopy_upper_eyelid, droopy_lower_eyelid, firmness, moisture, redness, tear_trough, skin_type
-- Clinical-grade accuracy with mask visualization for each concern
-- Ephemeral processing - no selfies are stored
+## Tech stack
 
-### Bio-Inventory Engine
-The engine performs three critical analyses:
-1. **Scan-to-Shelf Detection**: Identifies conflicts between scan results and user's shelf products
-2. **Shelf-to-Shelf Detection**: Flags chemical incompatibilities between products
-3. **Redundancy Detection**: Recommends consolidation of duplicate functional roles
+**Application:** Next.js 16 App Router, React 19, TypeScript 5  
+**UI:** Tailwind CSS v4, Framer Motion, Lucide React, Cormorant Garamond, Plus Jakarta Sans, JetBrains Mono  
+**Visualization:** CSS 3D transforms and Three.js ecosystem dependencies  
+**Validation and tests:** Vitest, Testing Library, Playwright
 
-### Clinical Apothecary Design System
-- CSS variable-based design tokens (`--ca-amber`, `--ca-cream`, `--ca-slate`, `--ca-medical`, `--ca-accent-blue/red/green`)
-- Professional typography: Cormorant Garamond (headings), Inter (body), Fira Code (monospace)
-- Three judge personas: Clinical, Apothecary, Minimalist
-- Currency toggle with cost-per-day calculations
+## Run locally
 
-## Development
+### Requirements
 
-### Prerequisites
-- Node.js 18+
+- Node.js **20.9 or later**
 - npm
 
 ### Setup
+
 ```bash
-git clone <repository>
-cd shelfwise
-npm install
+git clone https://github.com/Nimit15/ShelfWise.git
+cd ShelfWise
+npm ci
 ```
 
-### Running the development server
+The local demo works without a YouCam API key:
+
 ```bash
 npm run dev
-# Open http://localhost:3000
 ```
 
-### YouCam API credentials
-Place `credentials.json` in `.claude/skills/skin-analysis-expert/`:
-```json
-{
-  "client_id": "your_client_id",
-  "client_secret": "your_client_secret",
-  "license_key": "your_license_key"
-}
-```
-> **Note**: `.env*` and `.claude/skills/**/credentials.json` are gitignored.
+Open [http://localhost:3000](http://localhost:3000) and choose **Run Demo Scan (no upload needed)**.
 
-### Testing
+To enable live scans, copy `.env.example` to `.env.local` and set your own Perfect Corp API key:
+
 ```bash
-# Unit tests (16 tests)
-npx vitest run
-
-# End-to-end tests (7 tests)
-npx playwright test
-
-# Production build
-npm run build
+cp .env.example .env.local
 ```
 
-## Project Structure
+PowerShell equivalent:
 
-### Engine (`/src/lib/engine/optimizer.ts`)
-- `runBioInventoryEngine(scan, shelf, constraints)`
-- `getPriorityConcerns(concerns)`
-- `getStrengths(concerns)`
-- `BARRIER_CONCERN_THRESHOLDS`
-- `INCOMPATIBLE_PAIRS`
-- `HIGH_IRRITANCY_ROLES`
-- `ROLE_PRIORITY`
+```powershell
+Copy-Item .env.example .env.local
+```
 
-### API Routes (`/src/app/api/youcam/`)
-- `POST /api/youcam/scan` - Submits image to YouCam V2.1 SD endpoint
-- `GET /api/youcam/status` - Returns credit balance and API health
+Then set `YOUCAM_API_KEY` in `.env.local` and restart the development server. Live HD scans use YouCam credits.
 
-## Visual Showcase
+## YouCam image requirements
 
-The application features a professional visual showcase with custom SVGs and live screenshots demonstrating the full user experience:
+The current upload flow requests HD analysis. Perfect Corp's V2.1 documentation specifies:
 
-- `docs/assets/hero-banner.svg` - Editorial header with pipeline visualization
-- `docs/assets/system-architecture.svg` - Technical architecture diagram
-- `docs/assets/conflict-matrix.svg` - Biometrics × Skin Profile × Shelf Actives matrix
-- Live high-DPI screenshots captured with Playwright (1440x900, deviceScaleFactor: 2)
+- JPEG or PNG only
+- File size **under 10 MB**
+- HD: at least **1080 px on the shorter side**
+- SD: at least **480 px on the shorter side**
+- Inputs with a long edge above 2560 px are automatically resized by the provider
+
+The browser preflight checks format, size, and dimensions before upload. The provider performs its own validation as well. See the [official YouCam V2.1 reference](https://docs.perfectcorp.com/reference/ai_skin_analysis/v2.1).
+
+## Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `YOUCAM_API_KEY` | unset | Enables live Perfect Corp YouCam scans and credit checks |
+| `YOUCAM_RATE_LIMIT_MAX` | `10` | Maximum live scan requests per IP in the configured window |
+| `YOUCAM_RATE_LIMIT_WINDOW_MS` | `3600000` | Rate-limit window in milliseconds (one hour by default) |
+
+The included rate limiter is in-memory and per process. A multi-instance production deployment should use a shared rate-limit store.
+
+## Useful commands
+
+```bash
+npm run lint       # ESLint
+npm run typecheck  # TypeScript
+npm test           # Vitest unit tests
+npm run test:e2e   # Playwright end-to-end tests
+npm run test:visual # Responsive visual checks and screenshots
+npm run build      # Production build
+```
+
+For Playwright's first run, install the Chromium browser once:
+
+```bash
+npx playwright install chromium
+```
+
+## Privacy and scope
+
+ShelfWise does not save uploaded selfies to an application database. When a user requests a live scan, the image is transmitted to Perfect Corp's YouCam API for analysis. The demo option uses a fixed sample scan and does not upload a selfie or call the live scan endpoint.
+
+ShelfWise is an educational decision-support prototype, not a medical diagnostic product. The ingredient parser and compatibility rules are heuristics; they cannot guarantee that a product is safe or predict an individual's reaction. Persistent or serious skin concerns should be discussed with a qualified healthcare professional.
 
 ## License
 
-MIT — Built for the Perfect Corp YouCam API Skin AI & eCommerce VTO Hackathon.
+MIT — see [LICENSE](LICENSE).

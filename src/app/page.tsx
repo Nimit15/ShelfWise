@@ -6,36 +6,14 @@ import { ScanResultsView } from "@/components/scan/scan-results-view";
 import { ShelfAuditView } from "@/components/audit/shelf-audit-view";
 import { ProductDetailView } from "@/components/audit/product-detail-view";
 import { VerdictView } from "@/components/audit/verdict-view";
-import { SkinType, Sensitivity, SkinProfile } from "@/components/shelf/SkinTypeSelector";
-import { mockScan } from "@/lib/mock-scan";
+import { SkinProfile } from "@/components/shelf/SkinTypeSelector";
 import { createDefaultShelf } from "@/lib/test-helpers";
 import { runBioInventoryEngine } from "@/lib/engine/optimizer";
 import { EngineConstraints, ShelfProduct, EngineOutput } from "@/types/engine";
+import { inferSkinProfileFromScan } from "@/lib/engine/skin-type-resolver";
 import type { ParsedScan } from "@/lib/mock-scan";
 
 type View = "landing" | "results" | "audit" | "product" | "verdict";
-
-function mapYouCamToSkinType(youCamType: string | undefined): SkinType {
-  if (!youCamType) return "normal";
-  const lower = youCamType.toLowerCase();
-  if (lower.includes("oily")) return "oily";
-  if (lower.includes("dry")) return "dry";
-  if (lower.includes("combination") || lower.includes("mix")) return "combination";
-  return "normal";
-}
-
-function inferSensitivityFromConcerns(concerns: { type: string; uiScore: number }[]): Sensitivity {
-  // Check for redness concern - high redness suggests sensitivity
-  const redness = concerns.find(c => c.type === "hd_redness");
-  if (redness && redness.uiScore >= 65) return "sensitive";
-  // Check for multiple barrier-related concerns
-  const barrierConcerns = concerns.filter(c =>
-    ["hd_moisture", "hd_redness", "hd_texture", "hd_oiliness"].includes(c.type)
-  );
-  const highBarrierIssues = barrierConcerns.filter(c => c.uiScore >= 70).length;
-  if (highBarrierIssues >= 2) return "sensitive";
-  return "normal";
-}
 
 export default function HomePage() {
   const [currentView, setCurrentView] = useState<View>("landing");
@@ -87,18 +65,26 @@ export default function HomePage() {
     setCurrentView("product");
   };
 
-  // Auto-populate skinProfile when scanData is received
+  // Infer the initial profile using the shared YouCam score-direction rules.
+  // User edits made in the scan-profile step remain in parent state for the audit.
   useEffect(() => {
     if (scanData) {
-      const detectedType = mapYouCamToSkinType(scanData.skinType.type);
-      const detectedSensitivity = inferSensitivityFromConcerns(scanData.concerns);
-      const newProfile: SkinProfile = {
-        type: detectedType,
-        sensitive: detectedSensitivity,
-      };
-      setSkinProfile(newProfile);
+      const inferred = inferSkinProfileFromScan({
+        concerns: scanData.concerns,
+        skinType: scanData.skinType,
+      });
+      setSkinProfile({
+        type: inferred.skinType,
+        sensitive: inferred.isSensitive ? "sensitive" : "normal",
+      });
     }
   }, [scanData]);
+
+  // Revoke temporary image preview URLs when replaced or when the app unmounts.
+  useEffect(() => {
+    if (!selectedImage?.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(selectedImage);
+  }, [selectedImage]);
 
   return (
     <div className="min-h-screen bg-[var(--surface-dark)] text-[var(--color-text-primary)]">
@@ -107,6 +93,8 @@ export default function HomePage() {
         {currentView === "landing" && (
           <ScanLanding
             onStart={() => setCurrentView("results")}
+            skinProfile={skinProfile}
+            onSkinProfileChange={setSkinProfile}
             scanData={scanData}
             setScanData={setScanData}
             selectedImage={selectedImage}
@@ -123,7 +111,7 @@ export default function HomePage() {
               setCurrentView("landing");
               setSelectedImage(null);
             }}
-            skinProfile={skinProfile ?? { type: mapYouCamToSkinType(scanData.skinType.type), sensitive: "normal" }}
+            skinProfile={skinProfile}
             onSkinProfileChange={setSkinProfile}
             selectedImage={selectedImage}
           />

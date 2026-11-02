@@ -1,43 +1,24 @@
 <svg width="1200" height="420" viewBox="0 0 1200 420" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#161310"/>
-      <stop offset="100%" style="stop-color:#F87171"/>
+    <linearGradient id="background" x1="0" y1="0" x2="1200" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#211C18"/>
+      <stop offset="1" stop-color="#100E0C"/>
     </linearGradient>
-    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#F7F4EF"/>
-      <stop offset="100%" style="stop-color:#E5C185"/>
-    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 120) rotate(90) scale(320 520)">
+      <stop stop-color="#E5C185" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#E5C185" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <!-- Background -->
-  <rect width="1200" height="420" fill="url(#grad1)"/>
-
-  <!-- Ivory left accent -->
-  <rect x="0" y="0" width="300" height="420" fill="url(#grad2)"/>
-
-  <!-- Main content -->
-  <g transform="translate(400, 210)">
-    <!-- ShelfWise Atelier title -->
-    <text x="0" y="-180" font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700" fill="#F7F4EF" text-anchor="middle">ShelfWise Atelier</text>
-
-    <!-- Subtitle -->
-    <text x="0" y="-130" font-family="Inter, system-ui, sans-serif" font-size="32" fill="#F87171" text-anchor="middle">16-Channel YouCam V2.1 Biometric Telemetry & Bio-Inventory Conflict Engine</text>
-
-    <!-- Pipeline pills -->
-    <g transform="translate(0, 80)">
-      <g stroke="#34D399" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="-200" y1="-12" x2="-150" y1="-12"/>
-        <text x="-140" y="-5" font-family="Inter, system-ui, sans-serif" font-size="20" fill="#34D399" text-anchor="middle">01 Optical Scan</text>
-
-        <line x1="-60" y1="-12" x2="-10" y1="-12"/>
-        <text x="-5" y="-5" font-family="Inter, system-ui, sans-serif" font-size="20" fill="#34D399" text-anchor="middle">02 Skin-Type Calibration</text>
-
-        <line x1="80" y1="-12" x2="130" y1="-12"/>
-        <text x="120" y="-5" font-family="Inter, system-ui, sans-serif" font-size="20" fill="#34D399" text-anchor="middle">03 Reference Formulations</text>
-
-        <line x1="220" y1="-12" x2="270" y1="-12"/>
-        <text x="260" y="-5" font-family="Inter, system-ui, sans-serif" font-size="20" fill="#34D399" text-anchor="middle">04 Shelf Conflict Ledger</text>
-      </g>
-    </g>
+  <rect width="1200" height="420" rx="28" fill="url(#background)"/>
+  <rect width="1200" height="420" rx="28" fill="url(#glow)"/>
+  <rect x="64" y="64" width="1072" height="292" rx="22" stroke="#E5C185" stroke-opacity=".24"/>
+  <text x="600" y="158" text-anchor="middle" fill="#E5C185" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" letter-spacing="3">YOUCAM V2.1 · SKIN INTELLIGENCE · SHELF AUDIT</text>
+  <text x="600" y="244" text-anchor="middle" fill="#F7F4EF" font-family="Georgia, 'Times New Roman', serif" font-size="82" font-weight="400">ShelfWise</text>
+  <text x="600" y="288" text-anchor="middle" fill="#C4BDB3" font-family="Arial, Helvetica, sans-serif" font-size="24">Scan your skin. Audit your shelf. Buy only what fits.</text>
+  <g transform="translate(205 326)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#E5C185">
+    <text x="0" y="0">01  SCAN</text>
+    <text x="208" y="0">02  CALIBRATE</text>
+    <text x="445" y="0">03  AUDIT</text>
+    <text x="647" y="0">04  OPTIMIZE</text>
   </g>
 </svg>

@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
       success: true,
       parsed: {
         productName: name,
-        baseIngredients: baseIngredients.map(ing => ({
+        baseIngredients: baseIngredients.map((ing, index) => ({
           name: ing.name,
           concentration: ing.concentration,
-          rank: ing.originalText ? Object.keys({}).length : 0, // rank is position in array
+          rank: index + 1,
         })),
         allIngredients: parsed.ingredients.map(ing => ({
           name: ing.name,

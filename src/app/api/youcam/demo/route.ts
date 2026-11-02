@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { parseScanResults, ALL_HD_CONCERNS } from '@/lib/youcam';
+import { parseScanResults } from '@/lib/youcam';
 import { runBioInventoryEngine } from '@/lib/engine/optimizer';
 import { CATALOG } from '@/data/catalog';
 import { inferSkinProfileFromScan } from '@/lib/engine/skin-type-resolver';
@@ -82,6 +82,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       demo: true,
+      source: "demo",
       skinProfile,
       zoneMap,
       engineOutput,

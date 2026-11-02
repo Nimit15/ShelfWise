@@ -22,9 +22,25 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ShelfWise Atelier — Clinical Skin AI & Bio-Inventory Audit",
+  applicationName: "ShelfWise",
+  title: "ShelfWise | YouCam Skin Analysis & Skincare Shelf Audit",
   description:
-    "Scan your skin with YouCam V2.1 AI. Audit your existing skincare shelf for active & vehicle conflicts. Buy only what you need — often ₹0.",
+    "Connect YouCam V2.1 skin analysis with an ingredient-aware audit of the skincare products you already own. Build a more compatible routine and avoid unnecessary purchases.",
+  keywords: [
+    "ShelfWise",
+    "YouCam V2.1",
+    "skin analysis",
+    "skincare routine",
+    "INCI parser",
+    "ingredient compatibility",
+    "skincare shelf audit",
+  ],
+  openGraph: {
+    title: "ShelfWise — Scan your skin. Audit your shelf.",
+    description:
+      "A skin-aware skincare shelf audit powered by YouCam V2.1 and an explainable ingredient-compatibility engine.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

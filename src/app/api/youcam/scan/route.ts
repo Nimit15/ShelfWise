@@ -1,176 +1,121 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { runSkinAnalysis, calculateSDCost, calculateHDCost, ALL_SD_CONCERNS, ALL_HD_CONCERNS, parseScanResults, analyzeImageBiometrics } from '@/lib/youcam';
-import { checkRateLimit, validateSelfiePreflight, createVerifiedFallbackResult, VERIFIED_FALLBACK_SCAN } from '@/lib/youcam/preflight';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  runSkinAnalysis,
+  calculateSDCost,
+  calculateHDCost,
+  ALL_SD_CONCERNS,
+  ALL_HD_CONCERNS,
+  parseScanResults,
+} from "@/lib/youcam";
+import { checkRateLimit, validateSelfiePreflight } from "@/lib/youcam/preflight";
 
-/**
- * YouCam Skin Analysis endpoint
- * Upload an image and run skin analysis via YouCam API
- * Compatible with Next.js 16 (App Router)
- * Includes rate limiting, preflight validation, and verified fallback mode
- */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const SCAN_TIMEOUT_MS = 120_000;
+
 export async function POST(request: NextRequest) {
+  if (!process.env.YOUCAM_API_KEY) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Live YouCam scanning is not configured. Add YOUCAM_API_KEY to .env.local, or use the clearly labeled demo scan.",
+        source: "unavailable",
+      },
+      { status: 503 }
+    );
+  }
+
   try {
-    // Check for explicit fallback request
-    const useFallback = request.headers.get('x-use-verified-fallback') === 'true' ||
-                        request.nextUrl.searchParams.get('fallback') === 'true';
+    const formData = await request.formData();
+    const fileEntry = formData.get("file");
+    const file = fileEntry instanceof File ? fileEntry : null;
 
-    // Check for API key
-    const hasApiKey = !!process.env.YOUCAM_API_KEY;
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: "No image file was provided." },
+        { status: 400 }
+      );
+    }
 
-    // Get client IP for rate limiting
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+    const tierValue = formData.get("tier");
+    if (tierValue !== null && tierValue !== "SD" && tierValue !== "HD") {
+      return NextResponse.json(
+        { success: false, error: "The scan tier must be SD or HD." },
+        { status: 400 }
+      );
+    }
+    const tier: "SD" | "HD" = tierValue === "HD" ? "HD" : "SD";
 
-    // Check rate limit (skip for fallback requests)
-    if (!useFallback) {
-      const rateLimit = checkRateLimit(ip);
-      if (!rateLimit.allowed) {
-        // Rate limited - return fallback with rate limited flag
-        const fallback = createVerifiedFallbackResult('rate_limited');
-        return NextResponse.json({
-          success: true,
-          results: fallback,
-          rawResults: null,
-          creditsUsed: 0,
-          tier: 'HD',
-          concernsAnalyzed: 16,
-          scanTimestamp: new Date().toISOString(),
-          isFallback: true,
-          fallbackReason: 'rate_limited',
+    const preflight = await validateSelfiePreflight(file, tier);
+    if (!preflight.valid) {
+      return NextResponse.json(
+        { success: false, error: preflight.error, warnings: preflight.warnings },
+        { status: 400 }
+      );
+    }
+
+    if (!["image/jpeg", "image/png"].includes(file.type.toLowerCase())) {
+      return NextResponse.json(
+        { success: false, error: "YouCam accepts JPEG and PNG images only." },
+        { status: 400 }
+      );
+    }
+
+    if (file.size >= MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { success: false, error: "The image must be smaller than 10 MB." },
+        { status: 400 }
+      );
+    }
+
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const clientIp = forwardedFor?.split(",")[0]?.trim() || "unknown";
+    const rateLimit = checkRateLimit(clientIp);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "The live scan limit for this IP has been reached. Please try again after the rate-limit window resets.",
           rateLimit: {
             remaining: rateLimit.remaining,
             resetAt: new Date(rateLimit.resetAt).toISOString(),
           },
-        });
-      }
-    }
-
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const tier = (formData.get('tier') as 'SD' | 'HD') || 'SD';
-    const concernsParam = formData.get('concerns') as string;
-    const enableMaskOverlay = formData.get('enableMaskOverlay') === 'true';
-
-    // Validation
-    if (!file && !useFallback && !hasApiKey) {
-      // No file and no API key - return fallback
-      const fallback = createVerifiedFallbackResult('no_api_key');
-      return NextResponse.json({
-        success: true,
-        results: fallback,
-        rawResults: null,
-        creditsUsed: 0,
-        tier: 'HD',
-        concernsAnalyzed: 16,
-        scanTimestamp: new Date().toISOString(),
-        isFallback: true,
-        fallbackReason: 'no_api_key',
-      });
-    }
-
-    if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided. Please upload an image file.' },
-        { status: 400 }
+        },
+        { status: 429 }
       );
     }
 
-    // Preflight validation (includes file type, size, dimensions)
-    const preflight = await validateSelfiePreflight(file);
-    if (!preflight.valid) {
-      return NextResponse.json(
-        { error: preflight.error, success: false, warnings: preflight.warnings },
-        { status: 400 }
-      );
-    }
+    const concernsField = formData.get("concerns");
+    const allConcerns = tier === "HD" ? ALL_HD_CONCERNS : ALL_SD_CONCERNS;
+    const concerns =
+      typeof concernsField === "string" && concernsField.trim() && concernsField !== "all"
+        ? concernsField.split(",").map((concern) => concern.trim()).filter(Boolean)
+        : [...allConcerns];
 
-    // Validate file type (also covered by preflight)
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG, PNG, and WebP are supported.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size (max 10MB) - also covered by preflight
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
-        { status: 400 }
-      );
-    }
-
-    // Parse concerns
-    let concerns: string[];
-    if (concernsParam === 'all') {
-      concerns = tier === 'HD' ? ALL_HD_CONCERNS : ALL_SD_CONCERNS;
-    } else if (concernsParam) {
-      concerns = concernsParam.split(',').map(c => c.trim()).filter(Boolean);
-    } else {
-      concerns = tier === 'HD' ? ALL_HD_CONCERNS : ALL_SD_CONCERNS;
-    }
-
-    // Validate concerns match tier (no mixing SD and HD)
-    const isHD = tier === 'HD';
-    const invalidConcerns = concerns.filter(c =>
-      isHD ? !c.startsWith('hd_') : c.startsWith('hd_')
-    );
+    const invalidConcerns = concerns.filter((concern) => !allConcerns.includes(concern));
     if (invalidConcerns.length > 0) {
       return NextResponse.json(
-        { error: `Cannot mix SD and HD concerns. Invalid for ${tier}: ${invalidConcerns.join(', ')}` },
+        {
+          success: false,
+          error: `These concerns are not valid for ${tier}: ${invalidConcerns.join(", ")}`,
+        },
         { status: 400 }
       );
     }
 
-    // Convert file to buffer (needed for both API call and biometric fallback)
+    const enableMaskOverlay = formData.get("enableMaskOverlay") === "true";
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // If no API key, run biometric analysis on the uploaded image
-    // This analyzes actual pixel data rather than returning static mock data
-    if (!hasApiKey) {
-      const biometricResults = analyzeImageBiometrics(buffer);
-      return NextResponse.json({
-        success: true,
-        results: biometricResults,
-        rawResults: null,
-        creditsUsed: 0,
-        tier,
-        concernsAnalyzed: 16,
-        scanTimestamp: new Date().toISOString(),
-        isFallback: true,
-        fallbackReason: 'biometric_analysis',
-        preflightWarnings: preflight.warnings,
-      });
-    }
-
-    // If explicit fallback requested (with a file), run biometric analysis
-    if (useFallback) {
-      const biometricResults = analyzeImageBiometrics(buffer);
-      return NextResponse.json({
-        success: true,
-        results: biometricResults,
-        rawResults: null,
-        creditsUsed: 0,
-        tier,
-        concernsAnalyzed: 16,
-        scanTimestamp: new Date().toISOString(),
-        isFallback: true,
-        fallbackReason: 'explicit',
-        preflightWarnings: preflight.warnings,
-      });
-    }
-
-    // Run analysis with timeout fallback
-    let results;
-    let isBiometricFallback = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      // Add a timeout wrapper (30 seconds)
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('YouCam API timeout')), 30000)
-      );
-      results = await Promise.race([
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error("YouCam analysis timed out after 120 seconds.")),
+          SCAN_TIMEOUT_MS
+        );
+      });
+
+      const rawResults = await Promise.race([
         runSkinAnalysis(buffer, file.name, file.type, {
           tier,
           concerns,
@@ -178,61 +123,41 @@ export async function POST(request: NextRequest) {
         }),
         timeoutPromise,
       ]);
-    } catch (analysisError) {
-      // On timeout or network error, use INTELLIGENT BIOMETRIC ANALYZER (not static mock)
-      // This analyzes the actual uploaded image pixels to generate unique, deterministic results
-      isBiometricFallback = true;
-      console.log('YouCam API unavailable - running biometric analysis on uploaded image');
-      const biometricResults = analyzeImageBiometrics(buffer);
 
-      // Calculate cost (0 credits since we didn't use YouCam)
-      const cost = tier === 'HD' ? calculateHDCost(concerns.length) : calculateSDCost(concerns.length);
+      const parsed = parseScanResults(rawResults);
+      if (parsed.concerns.length === 0) {
+        throw new Error("YouCam completed the task but returned no skin-concern scores.");
+      }
+
+      const creditsUsed =
+        tier === "HD" ? calculateHDCost(concerns.length) : calculateSDCost(concerns.length);
 
       return NextResponse.json({
         success: true,
-        results: biometricResults,
-        rawResults: null,
-        creditsUsed: 0,
+        source: "youcam",
+        results: parsed,
         tier,
-        concernsAnalyzed: 16,
+        concernsAnalyzed: concerns.length,
+        creditsUsed,
         scanTimestamp: new Date().toISOString(),
-        isFallback: true,
-        fallbackReason: 'biometric_analysis',
         preflightWarnings: preflight.warnings,
       });
+    } catch (analysisError) {
+      const message =
+        analysisError instanceof Error ? analysisError.message : "YouCam analysis failed.";
+      console.error("YouCam analysis failed:", analysisError);
+      return NextResponse.json(
+        { success: false, source: "unavailable", error: message },
+        { status: 502 }
+      );
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
-
-    // Parse results into structured format
-    const parsed = parseScanResults(results);
-
-    // Calculate cost
-    const cost = tier === 'HD' ? calculateHDCost(concerns.length) : calculateSDCost(concerns.length);
-
-    return NextResponse.json({
-      success: true,
-      results: parsed,
-      rawResults: results,
-      creditsUsed: cost,
-      tier,
-      concernsAnalyzed: concerns.length,
-      scanTimestamp: new Date().toISOString(),
-      isFallback: false,
-      preflightWarnings: preflight.warnings,
-    });
   } catch (error) {
-    console.error('YouCam scan error:', error);
-    const message = error instanceof Error ? error.message : 'Scan failed';
-
-    // On unexpected error, try to return fallback
-    const fallback = createVerifiedFallbackResult('timeout');
+    const message = error instanceof Error ? error.message : "The scan request could not be processed.";
+    console.error("YouCam scan request failed:", error);
     return NextResponse.json(
-      {
-        error: message,
-        success: false,
-        fallback: fallback,
-        isFallback: true,
-        fallbackReason: 'error',
-      },
+      { success: false, source: "unavailable", error: message },
       { status: 500 }
     );
   }
@@ -240,34 +165,26 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    endpoints: {
-      scan: 'POST /api/youcam/scan - Upload image and run skin analysis',
-      status: 'GET /api/youcam/status - Check API credits and costs',
-      demo: 'GET /api/youcam/demo - Run demo with mock data (no API key needed)',
+    endpoint: "POST /api/youcam/scan",
+    description: "Runs a live Perfect Corp YouCam V2.1 skin-analysis task.",
+    requiredFormData: {
+      file: "JPEG or PNG image smaller than 10 MB",
+      tier: "SD or HD (the app requests HD)",
+      concerns: 'Comma-separated concerns or "all"; SD and HD concerns cannot be mixed.',
+      enableMaskOverlay: "Optional true/false flag",
     },
-    parameters: {
-      file: 'Image file (JPEG/PNG, max 10MB)',
-      tier: 'SD or HD (default: SD)',
-      concerns: 'Comma-separated list or "all" (default: all 16 concerns for tier)',
-      enableMaskOverlay: 'true/false (default: false)',
+    imageRequirements: {
+      SD: "At least 480px on the shorter side",
+      HD: "At least 1080px on the shorter side",
+      longEdge: "Inputs above 2560px are automatically resized by Perfect Corp",
     },
     availableConcerns: {
       SD: ALL_SD_CONCERNS,
       HD: ALL_HD_CONCERNS,
     },
-    costEstimates: {
-      SD: {
-        '1-4 concerns': calculateSDCost(1),
-        '5-8 concerns': calculateSDCost(5),
-        '9-12 concerns': calculateSDCost(9),
-        '13-16 concerns': calculateSDCost(13),
-      },
-      HD: {
-        '1-4 concerns': calculateHDCost(1),
-        '5-8 concerns': calculateHDCost(5),
-        '9-12 concerns': calculateHDCost(9),
-        '13-16 concerns': calculateHDCost(13),
-      },
+    creditsForAll16Concerns: {
+      SD: calculateSDCost(16),
+      HD: calculateHDCost(16),
     },
   });
 }

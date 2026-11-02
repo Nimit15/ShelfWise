@@ -14,6 +14,7 @@ import { TiltCard } from "@/components/ui/TiltCard";
 import { SkinTypeSelector, SkinProfile } from "@/components/shelf/SkinTypeSelector";
 import { CONCERN_LABELS, CONCERN_COLORS, ParsedScan, mockScan } from "@/lib/mock-scan";
 import { SkinType } from "@/components/shelf/SkinTypeSelector";
+import { validateSelfiePreflight } from "@/lib/youcam/preflight";
 
 export interface ScanLandingProps {
   onStart: () => void;
@@ -21,6 +22,8 @@ export interface ScanLandingProps {
   setScanData: (data: ParsedScan) => void;
   selectedImage: string | null;
   setSelectedImage: (img: string | null) => void;
+  skinProfile: SkinProfile;
+  onSkinProfileChange: (profile: SkinProfile) => void;
 }
 
 const FEATURES = [
@@ -77,11 +80,12 @@ export function ScanLanding({
   setScanData,
   selectedImage,
   setSelectedImage,
+  skinProfile,
+  onSkinProfileChange,
 }: ScanLandingProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploadingComplete, setIsUploadingComplete] = useState(false);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [biometricConcernCount, setBiometricConcernCount] = useState(0);
 
   const handleFileUpload = useCallback(
@@ -92,13 +96,18 @@ export function ScanLanding({
       setIsUploading(true);
       setUploadError(null);
       setIsUploadingComplete(false);
-      setUploadedImageUrl(null);
       setBiometricConcernCount(0);
 
+      let previewUrl: string | null = null;
       try {
-        // Create local preview URL for the uploaded selfie
-        const previewUrl = URL.createObjectURL(file);
-        setUploadedImageUrl(previewUrl);
+        // Validate against Perfect Corp's HD input requirements before upload.
+        const preflight = await validateSelfiePreflight(file, "HD");
+        if (!preflight.valid) {
+          setUploadError(preflight.error || "This image does not meet the HD scan requirements.");
+          return;
+        }
+
+        previewUrl = URL.createObjectURL(file);
         setSelectedImage(previewUrl);
 
         const formData = new FormData();
@@ -110,34 +119,21 @@ export function ScanLanding({
           method: "POST",
           body: formData,
         });
-
         const result = await response.json();
 
-        if (result.isFallback || !result.results) {
-          // Biometric analysis mode - this is working, not an error
-          if (result.fallbackReason === 'biometric_analysis') {
-            // We still got results from biometric analysis
-            setScanData(result.results as ParsedScan);
-            setUploadError(null);
-            setBiometricConcernCount(result.concernsAnalyzed || 16);
-            setIsUploadingComplete(true);
-            return;
-          }
-          // Other fallback cases
-          setUploadError(
-            "YouCam API not configured — showing demo scan results instead."
-          );
-          setIsUploadingComplete(false);
-          return;
+        if (!response.ok || !result.success || !result.results) {
+          throw new Error(result.error || "The live YouCam scan could not be completed.");
         }
 
-        setScanData(result.results as ParsedScan);
+        setScanData({ ...result.results, source: "youcam" } as ParsedScan);
         setUploadError(null);
         setBiometricConcernCount(result.concernsAnalyzed || 16);
         setIsUploadingComplete(true);
       } catch (err) {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setSelectedImage(null);
         setUploadError(
-          err instanceof Error ? err.message : "Upload failed. Try again."
+          err instanceof Error ? err.message : "Upload failed. Please try again."
         );
         setIsUploadingComplete(false);
       } finally {
@@ -148,17 +144,16 @@ export function ScanLanding({
   );
 
   const handleDemoScan = useCallback(() => {
-    setScanData(mockScan);
+    setScanData({ ...mockScan, source: "demo" });
     setUploadError(null);
     setIsUploadingComplete(true);
-    setUploadedImageUrl(null);
     setSelectedImage(null);
   }, [setScanData, setSelectedImage]);
 
   const handleFileSelect = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/jpeg,image/png,image/webp";
+    input.accept = "image/jpeg,image/png";
     input.onchange = (e) => {
       const target = e.target as HTMLInputElement;
       handleFileUpload({ target } as React.ChangeEvent<HTMLInputElement>);
@@ -171,8 +166,10 @@ export function ScanLanding({
       e.preventDefault();
       e.stopPropagation();
       const file = e.dataTransfer.files?.[0];
-      if (file && file.type.startsWith("image/")) {
+      if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
         handleFileUpload(createFileEvent(file));
+      } else if (file) {
+        setUploadError("YouCam accepts JPEG and PNG images. Please choose one of those formats.");
       }
     },
     [handleFileUpload]
@@ -204,15 +201,7 @@ export function ScanLanding({
   const skinType: SkinType = scanData?.skinType
     ? scanData.skinType.type.toLowerCase() as SkinType
     : "normal";
-
-  const defaultSkinProfile: SkinProfile = {
-    type: skinType,
-    sensitive: scanData?.concerns.some(
-      (c) => c.type === "hd_redness" && c.uiScore < 65
-    )
-      ? "sensitive"
-      : "normal",
-  };
+  const isLiveYouCam = scanData?.source === "youcam";
 
   // --- Landing view: show only Hero + Uploader when no scan data ---
   if (!scanData) {
@@ -237,12 +226,12 @@ export function ScanLanding({
             </div>
 
             <h1 className="font-serif-editorial mb-4 text-5xl font-normal text-[#F7F4EF] md:text-6xl">
-              ShelfWise Atelier
+              ShelfWise
             </h1>
 
             <p className="mx-auto max-w-2xl text-lg text-[#C4BDB3]">
-              Scan your skin with YouCam V2.1 AI. Audit your existing skincare shelf
-              for active & vehicle conflicts. Buy only what you need — often ₹0.
+              Connect a YouCam V2.1 skin scan with an audit of the products you already own.
+              Spot routine conflicts, understand formulation fit, and buy only for genuine gaps — sometimes ₹0.
             </p>
           </motion.div>
 
@@ -261,7 +250,7 @@ export function ScanLanding({
               >
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png"
                   className="hidden"
                   onChange={handleFileUpload}
                   disabled={isUploading}
@@ -283,7 +272,7 @@ export function ScanLanding({
                   <p className="flex items-center gap-1.5 text-sm">
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg ${
-                        uploadError.includes("not configured") || uploadError.includes("biometric")
+                        uploadError.toLowerCase().includes("not configured") || uploadError.toLowerCase().includes("api key")
                           ? "bg-[#E5C185]/10 text-[#E5C185]"
                           : "bg-red-500/10 text-red-400"
                       }`}
@@ -301,8 +290,7 @@ export function ScanLanding({
                       Upload Your Selfie for Analysis
                     </h3>
                     <p className="mb-4 max-w-md text-sm text-[#C4BDB3]">
-                      Drag & drop your photo or click to upload. We'll run a full
-                      YouCam V2.1 HD scan with 16 skin concerns.
+                      Upload a clear, front-facing JPEG or PNG. HD scans require at least 1080 px on the shorter side and a file under 10 MB.
                     </p>
                   </>
                 )}
@@ -393,7 +381,7 @@ export function ScanLanding({
           </div>
 
           <h1 className="font-serif-editorial mb-4 text-5xl font-normal text-[#F7F4EF] md:text-6xl">
-            ShelfWise Atelier
+            ShelfWise
           </h1>
 
           <p className="mx-auto max-w-2xl text-lg text-[#C4BDB3]">
@@ -413,13 +401,20 @@ export function ScanLanding({
               <h2 className="font-serif-editorial text-xl text-[#F7F4EF]">
                 Scan Profile
               </h2>
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono-tech text-xs text-[#8A8177]">
-                  Data source:
-                </span>
-                <span className="font-mono-tech text-xs font-medium text-[#34D399]">
-                  YouCam Live
-                </span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono-tech text-xs text-[#8A8177]">
+                    Data source:
+                  </span>
+                  <span className={`font-mono-tech text-xs font-medium ${isLiveYouCam ? "text-[#34D399]" : "text-[#E5C185]"}`}>
+                    {isLiveYouCam ? "YouCam Live" : "Demo fixture"}
+                  </span>
+                </div>
+                {!isLiveYouCam && (
+                  <span className="font-mono-tech text-[10px] text-[#8A8177]">
+                    Sample data · no live YouCam request
+                  </span>
+                )}
               </div>
             </div>
 
@@ -526,20 +521,8 @@ export function ScanLanding({
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           <SkinTypeSelector
-            value={{
-              ...defaultSkinProfile,
-            }}
-            onChange={(profile) => {
-              const newSkinType =
-                profile.type.charAt(0).toUpperCase() + profile.type.slice(1) as Capitalize<SkinType>;
-              setScanData({
-                ...scanData,
-                skinType: {
-                  type: newSkinType as 'Normal' | 'Oily' | 'Dry' | 'Combination',
-                  region: scanData.skinType.region,
-                },
-              });
-            }}
+            value={skinProfile}
+            onChange={onSkinProfileChange}
             youcamDetected={skinType}
             compact
           />
@@ -573,8 +556,7 @@ export function ScanLanding({
           </motion.button>
 
           <div className="mt-4 text-xs text-[#8A8177]">
-            By starting the audit, you agree to our clinical analysis terms.
-            Your scan data is processed locally and never stored.
+            Live selfies are sent to Perfect Corp for analysis. ShelfWise does not save uploaded selfies to an app database.
           </div>
         </motion.div>
       </div>

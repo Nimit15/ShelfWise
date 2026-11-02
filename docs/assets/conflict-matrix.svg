@@ -1,0 +1,54 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cm-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#161310"/>
+      <stop offset="100%" style="stop-color:#F87171"/>
+    </linearGradient>
+    <style>
+      .title { font-family: Inter, system-ui, sans-serif; font-size: 24px; font-weight: bold; fill: #F7F4EF; text-anchor: middle; }
+      .header { font-family: Inter, system-ui, sans-serif; font-size: 16px; fill: #E5C185; text-anchor: middle; }
+      .cell { font-family: Inter, system-ui, sans-serif; font-size: 14px; fill: #F7F4EF; text-anchor: middle; }
+    </style>
+  </defs>
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#cm-bg)"/>
+
+  <!-- Title -->
+  <text x="600" y="40" class="title">YouCam Biometrics × Skin Profile × Shelf Actives → Verdict</text>
+
+  <!-- Column headers -->
+  <text x="300" y="80" class="header">Moisture</text>
+  <text x="600" y="80" class="header">Redness</text>
+  <text x="900" y="80" class="header">Pores</text>
+
+  <!-- Row labels -->
+  <text x="60" y="130" class="header" text-anchor="end">Oily</text>
+  <text x="60" y="180" class="header" text-anchor="end">Dry</text>
+  <text x="60" y="230" class="header" text-anchor="end">Combination</text>
+  <text x="60" y="280" class="header" text-anchor="end">Normal</text>
+  <text x="60" y="330" class="header" text-anchor="end">Sensitive</text>
+
+  <!-- Verdict legend -->
+  <text x="600" y="370" class="cell">Keep (₹0) · Pause (₹0) · Reference Addition</text>
+
+  <!-- Grid cells -->
+  <rect x="200" y="100" width="200" height="40" fill="#34D399" rx="4"/>
+  <rect x="500" y="100" width="200" height="40" fill="#F87171" rx="4"/>
+  <rect x="800" y="100" width="200" height="40" fill="#E5C185" rx="4"/>
+
+  <rect x="200" y="150" width="200" height="40" fill="#34D399" rx="4"/>
+  <rect x="500" y="150" width="200" height="40" fill="#E5C185" rx="4"/>
+  <rect x="800" y="150" width="200" height="40" fill="#F87171" rx="4"/>
+
+  <rect x="200" y="200" width="200" height="40" fill="#E5C185" rx="4"/>
+  <rect x="500" y="200" width="200" height="40" fill="#34D399" rx="4"/>
+  <rect x="800" y="200" width="200" height="40" fill="#F87171" rx="4"/>
+
+  <rect x="200" y="250" width="200" height="40" fill="#E5C185" rx="4"/>
+  <rect x="500" y="250" width="200" height="40" fill="#E5C185" rx="4"/>
+  <rect x="800" y="250" width="200" height="40" fill="#34D399" rx="4"/>
+
+  <rect x="200" y="300" width="200" height="40" fill="#F87171" rx="4"/>
+  <rect x="500" y="300" width="200" height="40" fill="#F87171" rx="4"/>
+  <rect x="800" y="300" width="200" height="40" fill="#F87171" rx="4"/>
+</svg>

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { calculateImpactTelemetry, summarizeTelemetry, type ImpactTelemetry } from '@/lib/engine/telemetry';
 import { EngineOutput, ShelfProduct, EngineConstraints, FunctionalRole, TextureVehicle } from '@/types/engine';
 import { YouCamConcern } from '@/types/youcam';
+import { calculateCostPerDay } from '@/data/catalog';
 
 function createMockShelf(overrides: Partial<ShelfProduct>[] = []): ShelfProduct[] {
   const defaultShelf: ShelfProduct[] = [
@@ -187,13 +188,13 @@ function createMockEngineOutput(overrides: Partial<EngineOutput> = {}): EngineOu
       {
         concern: 'moisture',
         concernScore: 45,
-        recommendedProduct: null,
+        recommendedProduct: { id: 'moisturizer', name: 'Barrier Cream', brand: 'Test', priceInr: 899, priceUsd: 11, daysSupply: 60, roles: ['hydrator', 'barrier_repair'], usageTime: 'BOTH', activeIngredients: [{ name: 'Ceramide NP', concentration: '2%' }], inciList: '', targetConcerns: ['moisture', 'redness'], irritancyScore: 1, description: 'Test', suitableSkinTypes: ['normal', 'dry', 'combination'], incompatibleSkinTypes: ['oily'], textureVehicle: 'rich_cream', safeForSensitive: true },
         rationale: 'Need hydrator',
         exclusionRationales: [],
-        costInr: 0,
-        costUsd: 0,
-        costPerDayInr: 0,
-        costPerDayUsd: 0,
+        costInr: 899,
+        costUsd: 11,
+        costPerDayInr: calculateCostPerDay({ id: 'moisturizer', name: 'Barrier Cream', brand: 'Test', priceInr: 899, priceUsd: 11, daysSupply: 60, roles: ['hydrator', 'barrier_repair'], usageTime: 'BOTH', activeIngredients: [], inciList: '', targetConcerns: [], irritancyScore: 1, description: '', suitableSkinTypes: [], incompatibleSkinTypes: [], textureVehicle: 'rich_cream', safeForSensitive: true }, 'INR'),
+        costPerDayUsd: calculateCostPerDay({ id: 'moisturizer', name: 'Barrier Cream', brand: 'Test', priceInr: 899, priceUsd: 11, daysSupply: 60, roles: ['hydrator', 'barrier_repair'], usageTime: 'BOTH', activeIngredients: [], inciList: '', targetConcerns: [], irritancyScore: 1, description: '', suitableSkinTypes: [], incompatibleSkinTypes: [], textureVehicle: 'rich_cream', safeForSensitive: true }, 'USD'),
       },
     ],
     finalRoutine: {

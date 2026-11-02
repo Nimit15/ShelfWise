@@ -8,14 +8,14 @@ build/
 
 # Environment files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
 # Credentials & secrets
 **/credentials.json
 *.pem
+*.key
+*.p12
 
 # IDE & editor
 .idea/
@@ -49,3 +49,12 @@ coverage/
 .claude/
 CLAUDE.md
 AGENTS.md
+FRONTEND_HANDOFF.md
+ATELIER_FRONTEND_SPEC.md
+DEVPOST_SUBMISSION.md
+
+# Check output scratch
+check_output*.txt
+
+# Generated screenshots & assets (regenerated per build)
+docs/assets/screen-*.png

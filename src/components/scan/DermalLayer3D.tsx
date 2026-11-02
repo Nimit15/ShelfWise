@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ChevronLeft, ChevronRight, Info, ThermometerSun } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, Star } from "lucide-react";
 import { YouCamConcern } from "@/types/youcam";
 
 export interface DermalLayer {
@@ -32,7 +32,7 @@ const LAYERS: DermalLayer[] = [
     concerns: ["moisture", "redness", "texture", "oiliness"],
     color: "#e74c3c",
     opacity: 0.35,
-    icon: <ThermometerSun className="h-4 w-4" />,
+    icon: <Star className="h-4 w-4" />,
   },
   {
     id: "viable-epidermis",
@@ -43,7 +43,7 @@ const LAYERS: DermalLayer[] = [
     concerns: ["wrinkle", "age_spot", "dark_circle", "firmness", "texture", "acne"],
     color: "#f39c12",
     opacity: 0.3,
-    icon: <ThermometerSun className="h-4 w-4" />,
+    icon: <Star className="h-4 w-4" />,
   },
   {
     id: "papillary-dermis",
@@ -54,7 +54,7 @@ const LAYERS: DermalLayer[] = [
     concerns: ["dark_circle", "eye_bag", "tear_trough", "wrinkle"],
     color: "#3498db",
     opacity: 0.25,
-    icon: <ThermometerSun className="h-4 w-4" />,
+    icon: <Star className="h-4 w-4" />,
   },
   {
     id: "reticular-dermis",
@@ -65,7 +65,7 @@ const LAYERS: DermalLayer[] = [
     concerns: ["wrinkle", "firmness", "droopy_upper_eyelid", "droopy_lower_eyelid"],
     color: "#9b59b6",
     opacity: 0.2,
-    icon: <ThermometerSun className="h-4 w-4" />,
+    icon: <Star className="h-4 w-4" />,
   },
   {
     id: "hypodermis",
@@ -76,7 +76,7 @@ const LAYERS: DermalLayer[] = [
     concerns: ["droopy_upper_eyelid", "droopy_lower_eyelid", "tear_trough", "eye_bag"],
     color: "#2ecc71",
     opacity: 0.15,
-    icon: <ThermometerSun className="h-4 w-4" />,
+    icon: <Star className="h-4 w-4" />,
   },
 ];
 

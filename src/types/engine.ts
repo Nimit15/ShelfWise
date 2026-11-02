@@ -64,7 +64,7 @@ export interface RedundancyAlert {
 export interface GapRecommendation {
   concern: string;
   concernScore: number;
-  recommendedProduct: Product | null;
+  recommendedProduct: Product;
   rationale: string;
   exclusionRationales: Array<{
     productId: string;

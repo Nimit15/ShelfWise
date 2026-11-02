@@ -25,8 +25,8 @@ export interface RateLimitConfig {
 }
 
 let rateLimitConfig: RateLimitConfig = {
-  maxRequests: parseInt(process.env.YOUCAM_RATE_LIMIT_MAX || '10', 10),
-  windowMs: parseInt(process.env.YOUCAM_RATE_LIMIT_WINDOW_MS || '3600000', 10), // 1 hour
+  maxRequests: parseInt(process.env.YOUCAM_RATE_LIMIT_MAX || '100', 10),
+  windowMs: parseInt(process.env.YOUCAM_RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute
 };
 
 export function setRateLimitConfig(config: Partial<RateLimitConfig>) {

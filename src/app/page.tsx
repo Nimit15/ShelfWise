@@ -11,6 +11,7 @@ import { mockScan } from "@/lib/mock-scan";
 import { createDefaultShelf } from "@/lib/test-helpers";
 import { runBioInventoryEngine } from "@/lib/engine/optimizer";
 import { EngineConstraints, ShelfProduct, EngineOutput } from "@/types/engine";
+import type { ParsedScan } from "@/lib/mock-scan";
 
 type View = "landing" | "results" | "audit" | "product" | "verdict";
 
@@ -23,13 +24,26 @@ function mapYouCamToSkinType(youCamType: string | undefined): SkinType {
   return "normal";
 }
 
+function inferSensitivityFromConcerns(concerns: { type: string; uiScore: number }[]): Sensitivity {
+  // Check for redness concern - high redness suggests sensitivity
+  const redness = concerns.find(c => c.type === "hd_redness");
+  if (redness && redness.uiScore >= 65) return "sensitive";
+  // Check for multiple barrier-related concerns
+  const barrierConcerns = concerns.filter(c =>
+    ["hd_moisture", "hd_redness", "hd_texture", "hd_oiliness"].includes(c.type)
+  );
+  const highBarrierIssues = barrierConcerns.filter(c => c.uiScore >= 70).length;
+  if (highBarrierIssues >= 2) return "sensitive";
+  return "normal";
+}
+
 export default function HomePage() {
   const [currentView, setCurrentView] = useState<View>("landing");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Use mock scan data for demo (or YouCam results in production)
-  const [scanData, setScanData] = useState(mockScan);
+  // Initialize scanData as null - only populate after user uploads selfie or runs demo
+  const [scanData, setScanData] = useState<ParsedScan | null>(null);
   const [shelf, setShelf] = useState<ShelfProduct[]>(createDefaultShelf());
   const [constraints, setConstraints] = useState<EngineConstraints>({
     budgetInr: 3500,
@@ -40,14 +54,18 @@ export default function HomePage() {
   });
   const [engineResult, setEngineResult] = useState<EngineOutput | null>(null);
 
-  // Skin type profile state — initialized from YouCam scan detection
-  const [skinProfile, setSkinProfile] = useState<SkinProfile>(() => {
-    const detected = mapYouCamToSkinType(scanData.skinType?.type);
-    return { type: detected, sensitive: "normal" };
+  // Skin type profile state — initialized with default, populated after scan
+  const [skinProfile, setSkinProfile] = useState<SkinProfile>({
+    type: "normal",
+    sensitive: "normal",
   });
 
   // Run the engine when we have scan data and shelf
   const runEngine = () => {
+    if (!scanData || !skinProfile) {
+      setEngineResult(null);
+      return;
+    }
     const result = runBioInventoryEngine(scanData, shelf, {
       ...constraints,
       userSkinType: skinProfile.type as 'oily' | 'dry' | 'combination' | 'normal',
@@ -69,6 +87,19 @@ export default function HomePage() {
     setCurrentView("product");
   };
 
+  // Auto-populate skinProfile when scanData is received
+  useEffect(() => {
+    if (scanData) {
+      const detectedType = mapYouCamToSkinType(scanData.skinType.type);
+      const detectedSensitivity = inferSensitivityFromConcerns(scanData.concerns);
+      const newProfile: SkinProfile = {
+        type: detectedType,
+        sensitive: detectedSensitivity,
+      };
+      setSkinProfile(newProfile);
+    }
+  }, [scanData]);
+
   return (
     <div className="min-h-screen bg-[var(--surface-dark)] text-[var(--color-text-primary)]">
       {/* Main Content */}
@@ -83,21 +114,22 @@ export default function HomePage() {
           />
         )}
 
-        {currentView === "results" && (
+        {currentView === "results" && scanData && (
           <ScanResultsView
             scan={scanData}
+            engineResult={engineResult}
             onAudit={() => setCurrentView("audit")}
             onBack={() => {
               setCurrentView("landing");
               setSelectedImage(null);
             }}
-            skinProfile={skinProfile}
+            skinProfile={skinProfile ?? { type: mapYouCamToSkinType(scanData.skinType.type), sensitive: "normal" }}
             onSkinProfileChange={setSkinProfile}
             selectedImage={selectedImage}
           />
         )}
 
-        {currentView === "audit" && (
+        {currentView === "audit" && scanData && skinProfile && (
           <ShelfAuditView
             scan={scanData}
             engineResult={engineResult}
@@ -124,7 +156,7 @@ export default function HomePage() {
           />
         )}
 
-        {currentView === "verdict" && (
+        {currentView === "verdict" && scanData && (
           <VerdictView
             engineResult={engineResult}
             scan={scanData}

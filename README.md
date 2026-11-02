@@ -1,68 +1,44 @@
-# ShelfWise
+# ShelfWise Atelier
 
 **Clinical-Grade Skincare Intelligence**
 
-ShelfWise is a skin analysis and skincare inventory audit application built for the Perfect Corp YouCam API Skin AI & eCommerce VTO Hackathon. It combines the YouCam V2.1 SD Skin Analysis API with a clinical bio-inventory engine to deliver personalized, evidence-based skincare recommendations.
+ShelfWise is a skin analysis and skincare inventory audit application built for the Perfect Corp YouCam API Skin AI & eCommerce VTO Hackathon. It combines the YouCam V2.1 SD Skin Analysis API with a deterministic clinical bio-inventory engine to deliver personalized, evidence-based skincare recommendations.
 
 ## Architecture
 
-```
-src/
-├── app/                          # Next.js 15 App Router
-│   ├── api/youcam/
-│   │   ├── scan/route.ts         # YouCam V2.1 SD API integration
-│   │   └── status/route.ts       # Credit balance check
-│   ├── globals.css               # Clinical Apothecary design system
-│   ├── layout.tsx                # Root layout with font optimization
-│   └── page.tsx                  # 5-view state machine
-├── components/
-│   ├── scan/                     # Views 1-2: Landing & Results
-│   ├── audit/                    # Views 3-5: Audit, Product, Verdict
-│   └── ui/                       # Theme provider, toast, theme toggle
-├── lib/
-│   ├── engine/optimizer.ts       # Bio-inventory engine core
-│   ├── mock-scan.ts              # Mock scan with all 16 concerns
-│   ├── test-helpers.ts           # Default shelf factory
-│   └── youcam.ts                 # YouCam V2.1 API client
-├── data/catalog.ts               # Apothecary product catalog
-├── types/
-│   ├── engine.ts                 # Engine types
-│   └── youcam.ts                 # YouCam API types
-└── styles/clinical-apothecary.css # Design tokens
-public/
-└── demo-scan/                    # 16 concern mask PNGs
-e2e/shelfwise-app.spec.ts        # Playwright E2E tests (7 tests)
-```
+The application follows a clean Next.js 16 App Router architecture with a 5-view state machine:
 
-## Core Features
+1. **Landing Page** - Selfie upload and demo scan functionality
+2. **Results View** - 16-channel biometric telemetry report with 3D dermal stack visualization
+3. **Audit View** - Bio-inventory bathroom shelf audit with conflict detection
+4. **Product View** - Detailed product information and compatibility analysis
+5. **Verdict View** - Clinical decision ledger with actionable recommendations
 
-### YouCam V2.1 SD Skin Analysis API
-- 16-concern skin analysis (wrinkle, pore, texture, acne, oiliness, radiance, eye_bag, age_spot, dark_circle_v2, droopy_upper_eyelid, droopy_lower_eyelid, firmness, moisture, redness, tear_trough, skin_type)
-- 16-credit endpoint with clinical accuracy
-- Mask visualization for each concern
-- Ephemeral processing — no selfies are stored
+### Core Components
+
+- **YouCam V2.1 SD API Integration**: 16-concern skin analysis with mask visualization
+- **Bio-Inventory Engine**: Three-layer conflict detection system
+- **Clinical Apothecary Design System**: CSS variable-based design tokens with professional typography
+- **16-Concern Skin Profile**: Comprehensive skin assessment with sensitivity detection
+
+## Key Features
+
+### YouCam V2.1 SD Skin Analysis
+- 16 biometric concerns: wrinkle, pore, texture, acne, oiliness, radiance, eye_bag, age_spot, dark_circle_v2, droopy_upper_eyelid, droopy_lower_eyelid, firmness, moisture, redness, tear_trough, skin_type
+- Clinical-grade accuracy with mask visualization for each concern
+- Ephemeral processing - no selfies are stored
 
 ### Bio-Inventory Engine
-The `runBioInventoryEngine` performs three layers of analysis:
-
-1. **Scan-to-Shelf Detection**: Compares scan results against products on the user's shelf to detect ingredient conflicts with active skin concerns
-2. **Shelf-to-Shelf Detection**: Identifies chemical incompatibilities between products (e.g., retinoids + AHA/BHA, vitamin C + niacinamide)
-3. **Redundancy Detection**: Flags duplicate functional roles and recommends consolidation to save cost
-
-### 80+ Ingredient Database
-INCI ingredient parsing with active ingredient concentration analysis for:
-- Retinoids (retinol, retinaldehyde, tretinoin)
-- Antioxidants (vitamin C, vitamin E, ferulic acid)
-- Exfoliants (AHA: glycolic, lactic, mandelic; BHA: salicylic)
-- Barrier actives (ceramides, hyaluronic acid, niacinamide)
-- Sunscreen filters (oxybenzone, avobenzone, zinc oxide)
+The engine performs three critical analyses:
+1. **Scan-to-Shelf Detection**: Identifies conflicts between scan results and user's shelf products
+2. **Shelf-to-Shelf Detection**: Flags chemical incompatibilities between products
+3. **Redundancy Detection**: Recommends consolidation of duplicate functional roles
 
 ### Clinical Apothecary Design System
 - CSS variable-based design tokens (`--ca-amber`, `--ca-cream`, `--ca-slate`, `--ca-medical`, `--ca-accent-blue/red/green`)
-- Typography: Cormorant Garamond (headings), Inter (body), Fira Code (monospace)
-- Three judge personas: Clinical (evidence-based), Apothecary (formulation synergy), Minimalist (efficiency-focused)
-- Currency toggle: INR/USD with cost-per-day calculations
-- Custom theme provider and toast system (zero external dependencies)
+- Professional typography: Cormorant Garamond (headings), Inter (body), Fira Code (monospace)
+- Three judge personas: Clinical, Apothecary, Minimalist
+- Currency toggle with cost-per-day calculations
 
 ## Development
 
@@ -109,22 +85,26 @@ npm run build
 ## Project Structure
 
 ### Engine (`/src/lib/engine/optimizer.ts`)
-
-```typescript
-// Key exports
-runBioInventoryEngine(scan, shelf, constraints)
-getPriorityConcerns(concerns)  // Returns sorted low-score concerns
-getStrengths(concerns)          // Returns high-score concerns
-BARRIER_CONCERN_THRESHOLDS     // Moisture < 77, Redness > 65, etc.
-INCOMPATIBLE_PAIRS             // Retinoid+Exfoliant, VitaminC+Iron, etc.
-HIGH_IRRITANCY_ROLES           // Retinoid, Exfoliant, Azelaic
-ROLE_PRIORITY                // Clinical prioritization ordering
-```
+- `runBioInventoryEngine(scan, shelf, constraints)`
+- `getPriorityConcerns(concerns)`
+- `getStrengths(concerns)`
+- `BARRIER_CONCERN_THRESHOLDS`
+- `INCOMPATIBLE_PAIRS`
+- `HIGH_IRRITANCY_ROLES`
+- `ROLE_PRIORITY`
 
 ### API Routes (`/src/app/api/youcam/`)
+- `POST /api/youcam/scan` - Submits image to YouCam V2.1 SD endpoint
+- `GET /api/youcam/status` - Returns credit balance and API health
 
-- `POST /api/youcam/scan` — Submits image to YouCam V2.1 SD endpoint
-- `GET /api/youcam/status` — Returns credit balance and API health
+## Visual Showcase
+
+The application features a professional visual showcase with custom SVGs and live screenshots demonstrating the full user experience:
+
+- `docs/assets/hero-banner.svg` - Editorial header with pipeline visualization
+- `docs/assets/system-architecture.svg` - Technical architecture diagram
+- `docs/assets/conflict-matrix.svg` - Biometrics × Skin Profile × Shelf Actives matrix
+- Live high-DPI screenshots captured with Playwright (1440x900, deviceScaleFactor: 2)
 
 ## License
 

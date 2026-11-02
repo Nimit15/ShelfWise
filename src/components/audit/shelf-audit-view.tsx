@@ -25,9 +25,10 @@ import { ShelfProduct, EngineOutput, EngineConstraints, BiometricConflict, Chemi
 import { FunctionalRole } from "@/data/catalog";
 
 import { YouCamConcern, YouCamSkinType } from "@/types/youcam";
+import { ParsedScan } from "@/lib/mock-scan";
 
 export interface ShelfAuditViewProps {
-  scan: { concerns: YouCamConcern[]; skinType: YouCamSkinType; skinAge: number; overallScore: number };
+  scan: ParsedScan;
   engineResult: EngineOutput | null;
   shelf: ShelfProduct[];
   onShelfChange: (shelf: ShelfProduct[]) => void;
@@ -517,7 +518,7 @@ export function ShelfAuditView({
           </motion.div>
         )}
 
-        {/* Gap Recommendations */}
+        {/* Clinical Reference Guide - Gap Recommendations */}
         {gapRecommendations.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -525,77 +526,150 @@ export function ShelfAuditView({
             transition={{ duration: 0.6, delay: 0.6 }}
             className="mb-8"
           >
-            <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF]">
-              Gap Recommendations
+            <h2 className="font-serif-editorial mb-4 text-2xl text-[#F7F4EF] flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[#E5C185]" />
+              Clinical Reference Guide
             </h2>
+            <p className="mb-6 text-sm text-[#C4BDB3] max-w-3xl">
+              Evidence-based product recommendations addressing your biometric gaps. Each entry details the functional role, active ingredient profile, texture vehicle compatibility with your skin type, and the specific scan metrics this product targets. No commercial links — clinical reference only.
+            </p>
             <div className="space-y-4">
-              {gapRecommendations.map((gap, i) => (
-                <TiltCard key={gap.concern} className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="rounded-lg bg-[#E5C185]/10 p-2 text-[#E5C185]">
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="font-serif-editorial text-sm text-[#F7F4EF]">
-                          {gap.concern.charAt(0).toUpperCase() + gap.concern.slice(1)}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            gap.concernScore >= 85
-                              ? "text-[#F87171] bg-[#F87171]/15"
-                              : gap.concernScore >= 60
-                                ? "text-[#E5C185] bg-[#E5C185]/10"
-                                : "text-[#34D399] bg-[#34D399]/10"
-                          }`}
-                        >
-                          Score: {gap.concernScore}
-                        </span>
+              {gapRecommendations.map((gap, i) => {
+                const product = gap.recommendedProduct;
+                if (!product) return null;
+
+                const price = constraints.currency === "INR" ? product.priceInr : product.priceUsd;
+                const costPerDay = constraints.currency === "INR" ? gap.costPerDayInr : gap.costPerDayUsd;
+                const symbol = constraints.currency === "INR" ? "₹" : "$";
+                const activeIngredients = product.activeIngredients.map(ai => `${ai.name}${ai.concentration ? ` ${ai.concentration}` : ''}`).join(", ");
+                const roles = product.roles.map(roleLabel).join(", ");
+                const textureVehicle = product.textureVehicle.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+
+                return (
+                  <TiltCard key={gap.concern + "-" + i} className="p-5 border-l-4 border-[#E5C185]/40">
+                    <div className="mb-3 flex items-start gap-3">
+                      <div className="rounded-lg bg-[#E5C185]/10 p-2 text-[#E5C185] flex-shrink-0">
+                        <Sparkles className="h-5 w-5" />
                       </div>
-
-                      <p className="mb-3 text-sm text-[#C4BDB3]">
-                        {gap.rationale}
-                      </p>
-
-                      {gap.recommendedProduct && (
-                        <div className="mb-3 rounded-xl border border-white/12 bg-black/30 p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-serif-editorial text-sm text-[#F7F4EF]">
-                                {gap.recommendedProduct.name}
-                              </div>
-                              <div className="font-mono-tech text-[10px] text-[#8A8177]">
-                                {gap.recommendedProduct.brand} · {gap.recommendedProduct.description.slice(0, 80)}...
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-serif-editorial text-sm text-[#E5C185]">
-                                {priceDisplay(gap.recommendedProduct, constraints.currency)}
-                              </div>
-                              <div className="font-mono-tech text-[10px] text-[#8A8177]">
-                                Cost/day: {currencySymbol}{(constraints.currency === "INR" ? gap.costPerDayInr : gap.costPerDayUsd).toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h3 className="font-serif-editorial text-lg text-[#F7F4EF]">
+                            {product.name}
+                          </h3>
+                          <span className="font-serif-editorial text-sm text-[#E5C185] whitespace-nowrap">
+                            {symbol}{price}
+                          </span>
                         </div>
-                      )}
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs font-mono-tech text-[#8A8177]">
+                          <span className="flex items-center gap-1">
+                            <Package className="h-3 w-3" />
+                            Brand: {product.brand}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Droplets className="h-3 w-3" />
+                            {textureVehicle}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Shield className="h-3 w-3" />
+                            {product.safeForSensitive ? "Sensitive-Safe" : "Caution: Sensitive"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                      {gap.exclusionRationales.length > 0 && (
+                    {/* Functional Role & Active Ingredients */}
+                    <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/8">
+                        <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177] mb-1">
+                          Functional Role(s)
+                        </div>
+                        <div className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {roles}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/8">
+                        <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177] mb-1">
+                          Active Ingredients
+                        </div>
+                        <div className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {activeIngredients || "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Why This Targets Your Scan Scores */}
+                    <div className="mb-4 rounded-lg bg-[#E5C185]/5 border border-[#E5C185]/15 p-4">
+                      <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#E5C185] mb-2">
+                        Why This Targets Your Scan
+                      </div>
+                      <p className="text-sm text-[#C4BDB3] leading-relaxed">
+                        {gap.rationale}
+                        {gap.concernScore && (
+                          <span className="ml-2 font-mono-tech text-xs text-[#E5C185]">
+                            Concern Score: {gap.concernScore}/100
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Texture Vehicle Match & Skin Type Compatibility */}
+                    <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/8">
+                        <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177] mb-1">
+                          Texture Vehicle
+                        </div>
+                        <div className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {textureVehicle}
+                        </div>
+                        <div className="mt-1 font-mono-tech text-[10px] text-[#8A8177]">
+                          Match: {product.suitableSkinTypes.includes(skinProfile.type) ? "✓ Compatible" : "⚠ Review"}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/8">
+                        <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177] mb-1">
+                          Skin Type Match
+                        </div>
+                        <div className="font-serif-editorial text-sm text-[#F7F4EF]">
+                          {product.suitableSkinTypes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(", ")}
+                        </div>
+                        <div className="mt-1 font-mono-tech text-[10px] text-[#8A8177]">
+                          Your type: {skinProfile.type.charAt(0).toUpperCase() + skinProfile.type.slice(1)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/8">
+                        <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#8A8177] mb-1">
+                          Cost Efficiency
+                        </div>
+                        <div className="font-serif-editorial text-lg text-[#E5C185]">
+                          {symbol}{costPerDay.toFixed(2)}/day
+                        </div>
+                        <div className="mt-1 font-mono-tech text-[10px] text-[#8A8177]">
+                          {product.daysSupply}-day supply
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Exclusion Rationales */}
+                    {gap.exclusionRationales.length > 0 && (
+                      <div className="rounded-lg bg-[#F87171]/5 border border-[#F87171]/15 p-4">
+                        <div className="font-mono-tech text-[10px] uppercase tracking-[0.1em] text-[#F87171] mb-2">
+                          Products Excluded & Rationale
+                        </div>
                         <div className="space-y-1.5">
                           {gap.exclusionRationales.map((ex, j) => (
                             <div key={j} className="flex items-start gap-2 text-xs">
-                              <span className="font-mono-tech text-[#8A8177] mt-0.5">•</span>
+                              <span className="font-mono-tech text-[#F87171] mt-0.5">•</span>
                               <span className="font-mono-tech text-[#C4BDB3]">
                                 {ex.productName}: {ex.reason}
                               </span>
                             </div>
                           ))}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </TiltCard>
-              ))}
+                      </div>
+                    )}
+                  </TiltCard>
+                );
+              })}
             </div>
           </motion.div>
         )}

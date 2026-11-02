@@ -1,4 +1,4 @@
-# ShelfWise Atelier
+# ShelfWise 
 
 **Clinical-Grade Skincare Intelligence**
 
